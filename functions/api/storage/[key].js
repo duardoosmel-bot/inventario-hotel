@@ -1,64 +1,74 @@
-// Cloudflare Pages Function: /api/storage/:key
-// Requiere un KV namespace enlazado con el nombre "STORAGE_KV" en el proyecto Pages.
-//
-// GET    /api/storage/:key           -> { value: "..." }  o 404 si no existe
-// PUT    /api/storage/:key           -> body: { value: "..." }  guarda el valor
-// DELETE /api/storage/:key           -> borra la clave
-//
-// Parametro opcional ?shared=1 para namespacing (compartido vs por defecto).
-// Como esta app no tiene login, "shared" y el modo por defecto usan el mismo
-// espacio global: todo el personal del hotel comparte los mismos datos.
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,PUT,DELETE,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
 
-function kvKey(rawKey, shared) {
-  const prefix = shared ? 'shared:' : 'shared:'; // sin auth: todo es compartido
-  return prefix + rawKey;
-}
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: cors });
+    }
 
-export async function onRequestGet(context) {
-  const { env, params, request } = context;
-  const url = new URL(request.url);
-  const shared = url.searchParams.get('shared') === '1';
-  const key = decodeURIComponent(params.key);
+    const match = url.pathname.match(/^\/api\/storage\/([^/]+)$/);
+    if (!match) {
+      return new Response(JSON.stringify({ error: "not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json", ...cors },
+      });
+    }
 
-  const value = await env.STORAGE_KV.get(kvKey(key, shared));
-  if (value === null) {
-    return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
-  }
-  return new Response(JSON.stringify({ value }), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-  });
-}
+    const key = decodeURIComponent(match[1]);
+    const shared = url.searchParams.get("shared") === "1";
+    const scope = shared ? "shared" : "personal";
+    const kvKey = `${scope}:${key}`;
 
-export async function onRequestPut(context) {
-  const { env, params, request } = context;
-  const url = new URL(request.url);
-  const shared = url.searchParams.get('shared') === '1';
-  const key = decodeURIComponent(params.key);
+    try {
+      if (request.method === "GET") {
+        const value = await env.STORAGE.get(kvKey);
+        if (value === null) {
+          return new Response(JSON.stringify({ error: "not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json", ...cors },
+          });
+        }
+        return new Response(JSON.stringify({ key, value, shared }), {
+          headers: { "Content-Type": "application/json", ...cors },
+        });
+      }
 
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return new Response('Invalid JSON body', { status: 400 });
-  }
-  if (typeof body.value !== 'string') {
-    return new Response('Body must be { "value": "<string>" }', { status: 400 });
-  }
+      if (request.method === "PUT") {
+        const body = await request.text();
+        let value = body;
+        try {
+          const parsed = JSON.parse(body);
+          value = typeof parsed === "string" ? parsed : (parsed.value ?? body);
+        } catch (e) {
+          // body isn't JSON-wrapped, store raw text
+        }
+        await env.STORAGE.put(kvKey, value);
+        return new Response(JSON.stringify({ key, value, shared }), {
+          headers: { "Content-Type": "application/json", ...cors },
+        });
+      }
 
-  await env.STORAGE_KV.put(kvKey(key, shared), body.value);
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
+      if (request.method === "DELETE") {
+        await env.STORAGE.delete(kvKey);
+        return new Response(JSON.stringify({ key, deleted: true, shared }), {
+          headers: { "Content-Type": "application/json", ...cors },
+        });
+      }
 
-export async function onRequestDelete(context) {
-  const { env, params, request } = context;
-  const url = new URL(request.url);
-  const shared = url.searchParams.get('shared') === '1';
-  const key = decodeURIComponent(params.key);
-
-  await env.STORAGE_KV.delete(kvKey(key, shared));
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
+      return new Response(JSON.stringify({ error: "method not allowed" }), {
+        status: 405,
+        headers: { "Content-Type": "application/json", ...cors },
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: String(err) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...cors },
+      });
+    }
+  },
+};
