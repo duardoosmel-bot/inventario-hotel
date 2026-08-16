@@ -133,11 +133,6 @@
   .user-chip{display:inline-flex;align-items:center;gap:7px;background:var(--accent-soft);color:var(--accent);
     padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;}
   .user-chip .ic{font-size:14px;}
-  .depto-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card,#fff);
-    border:1px solid var(--line,#e5e5e5);border-radius:10px;margin-bottom:8px;}
-  .depto-name{flex:1;font-size:14px;}
-  .depto-edit-btn,.depto-del-btn{border:none;background:none;font-size:16px;cursor:pointer;padding:4px 8px;}
-  .depto-del-btn{color:#c0392b;}
   .modal .section{display:none;}
   .modal .section.active{display:block;}
   .photo-flag-btn{background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;margin-top:6px;text-decoration:underline;display:block;padding:6px 0;touch-action:manipulation;}
@@ -165,71 +160,52 @@
     #search{order:-1;}
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
-  <div class="controls" style="justify-content:flex-end;margin-bottom:6px;">
-    <select id="langSelector" title="Language / Idioma / Lugha">
-      <option value="es">🇪🇸 Español</option>
-      <option value="en">🇬🇧 English</option>
-      <option value="sw">🇹🇿 Kiswahili</option>
-    </select>
-  </div>
-  <h1 data-i18n="titulo">Inventario Hotel</h1>
-  <p class="subtitle"><span data-i18n="subtitulo">1871 items · 34 áreas · toca un item para registrar un movimiento</span></p>
-  <p class="shared-note">🔗 <span data-i18n="notaCompartido">Movimientos compartidos — visibles para todos los que usen este artefacto</span></p>
+  <h1>Inventario Hotel</h1>
+  <p class="subtitle">1871 items · 34 áreas · toca un item para registrar un movimiento</p>
+  <p class="shared-note">🔗 Movimientos compartidos — visibles para todos los que usen este artefacto</p>
   <div class="controls">
-    <button class="tabbtn active" id="tabBuscar" data-i18n="tabBuscador">Buscador</button>
-    <button class="tabbtn" id="tabHist"><span data-i18n="tabHistorial">Historial</span> <span id="histCountBadge"></span></button>
-    <button class="tabbtn pedidos-btn" id="tabPedidos">📋 <span data-i18n="tabPedidos">Pedidos</span> <span id="pedidosCountBadge"></span></button>
-    <button class="tabbtn" id="tabUsuarios">👥 <span data-i18n="tabUsuarios">Usuarios</span></button>
-    <button class="tabbtn" id="tabDeptos">🏢 <span data-i18n="tabDeptos">Departamentos</span></button>
-    <button class="tabbtn count-btn" id="btnUnlockCount">🔒 <span data-i18n="tabReconteo">Reconteo</span></button>
-    <button class="tabbtn sync-btn" id="btnSync">🔄 <span data-i18n="tabSync">Sync</span></button>
-  </div>
-  <div class="controls" style="margin-top:8px;flex-wrap:wrap;">
-    <span style="font-size:13px;color:var(--muted,#777);" data-i18n="etiquetaReporte">Reporte:</span>
-    <input type="date" id="repDesde" title="Desde">
-    <input type="date" id="repHasta" title="Hasta">
-    <button class="tabbtn" id="repUlt7" data-i18n="rep7dias">7 días</button>
-    <button class="tabbtn" id="repUlt15" data-i18n="rep15dias">15 días</button>
-    <button class="tabbtn" id="repMes" data-i18n="repMes">Este mes</button>
-    <button class="tabbtn" id="repTodo" data-i18n="repTodo">Todo</button>
-    <button class="tabbtn" id="btnExportReport">📊 <span data-i18n="exportarExcel">Exportar Excel</span></button>
+    <button class="tabbtn active" id="tabBuscar">Buscador</button>
+    <button class="tabbtn" id="tabHist">Historial <span id="histCountBadge"></span></button>
+    <button class="tabbtn pedidos-btn" id="tabPedidos">📋 Pedidos <span id="pedidosCountBadge"></span></button>
+    <button class="tabbtn" id="tabUsuarios">👥 Usuarios</button>
+    <button class="tabbtn count-btn" id="btnUnlockCount">🔒 Reconteo</button>
+    <button class="tabbtn sync-btn" id="btnSync">🔄 Sync</button>
   </div>
   <div class="controls" style="margin-top:8px;">
-    <button class="tabbtn user-btn" id="btnUser">👤 <span data-i18n="identificarse">Identificarse</span></button>
+    <button class="tabbtn user-btn" id="btnUser">👤 Identificarse</button>
   </div>
   <p class="sync-status" id="syncStatus"></p>
-  <p class="reconteo-hint" id="reconteoHint" style="display:none;">🔓 <span data-i18n="reconteoActivo">Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.</span></p>
+  <p class="reconteo-hint" id="reconteoHint" style="display:none;">🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.</p>
   <div class="controls" id="filterRow" style="margin-top:10px;">
-    <input type="text" id="search" data-i18n-placeholder="buscarPlaceholder" placeholder="Buscar por código, nombre o categoría...">
-    <select id="areaFilter" title="Filtrar por categoría"><option value="" data-i18n="todasCategorias">Todas las categorías</option><option value="Additional items">Additional items</option><option value="Bar utensil Beach">Bar utensil Beach</option><option value="asiatic">asiatic</option><option value="bamboo">bamboo</option><option value="bar utensil garden">bar utensil garden</option><option value="bar utensil main">bar utensil main</option><option value="bar utensil room service">bar utensil room service</option><option value="baskets">baskets</option><option value="beach restaurant">beach restaurant</option><option value="buffet beach restaurant">buffet beach restaurant</option><option value="buffet rm">buffet rm</option><option value="dinner party">dinner party</option><option value="flatware">flatware</option><option value="guest rooms">guest rooms</option><option value="hamburguesas for main restaurant">hamburguesas for main restaurant</option><option value="holloware">holloware</option><option value="kitchen utensils asiatic">kitchen utensils asiatic</option><option value="kitchen utensils beach">kitchen utensils beach</option><option value="kitchen utensils rc">kitchen utensils rc</option><option value="kitchen utensils rm">kitchen utensils rm</option><option value="main pool">main pool</option><option value="main restaurant and rooms">main restaurant and rooms</option><option value="pastry">pastry</option><option value="pastry utensil">pastry utensil</option><option value="public areas">public areas</option><option value="restaurant beach carnivorous rm">restaurant beach carnivorous rm</option><option value="restaurants">restaurants</option><option value="restaurants and room">restaurants and room</option><option value="signage">signage</option><option value="staff canteen">staff canteen</option><option value="staff canteen buffet">staff canteen buffet</option><option value="staff canteen kitchen utensils">staff canteen kitchen utensils</option><option value="stewarding">stewarding</option><option value="trolley">trolley</option></select>
-    <label class="chk"><input type="checkbox" id="onlyFusion"> <span data-i18n="soloFusionados">Solo fusionados</span></label>
-    <label class="chk"><input type="checkbox" id="onlyMoved"> <span data-i18n="conMovimientos">Con movimientos</span></label>
-    <label class="chk"><input type="checkbox" id="onlyInferred"> <span data-i18n="nombreARevisar">Nombre a revisar</span></label>
-    <label class="chk"><input type="checkbox" id="onlySinDato"> <span data-i18n="sinDatoStock">Sin dato de stock</span></label>
+    <input type="text" id="search" placeholder="Buscar por código, nombre o categoría...">
+    <select id="areaFilter" title="Filtrar por categoría"><option value="">Todas las categorías</option><option value="Additional items">Additional items</option><option value="Bar utensil Beach">Bar utensil Beach</option><option value="asiatic">asiatic</option><option value="bamboo">bamboo</option><option value="bar utensil garden">bar utensil garden</option><option value="bar utensil main">bar utensil main</option><option value="bar utensil room service">bar utensil room service</option><option value="baskets">baskets</option><option value="beach restaurant">beach restaurant</option><option value="buffet beach restaurant">buffet beach restaurant</option><option value="buffet rm">buffet rm</option><option value="dinner party">dinner party</option><option value="flatware">flatware</option><option value="guest rooms">guest rooms</option><option value="hamburguesas for main restaurant">hamburguesas for main restaurant</option><option value="holloware">holloware</option><option value="kitchen utensils asiatic">kitchen utensils asiatic</option><option value="kitchen utensils beach">kitchen utensils beach</option><option value="kitchen utensils rc">kitchen utensils rc</option><option value="kitchen utensils rm">kitchen utensils rm</option><option value="main pool">main pool</option><option value="main restaurant and rooms">main restaurant and rooms</option><option value="pastry">pastry</option><option value="pastry utensil">pastry utensil</option><option value="public areas">public areas</option><option value="restaurant beach carnivorous rm">restaurant beach carnivorous rm</option><option value="restaurants">restaurants</option><option value="restaurants and room">restaurants and room</option><option value="signage">signage</option><option value="staff canteen">staff canteen</option><option value="staff canteen buffet">staff canteen buffet</option><option value="staff canteen kitchen utensils">staff canteen kitchen utensils</option><option value="stewarding">stewarding</option><option value="trolley">trolley</option></select>
+    <label class="chk"><input type="checkbox" id="onlyFusion"> Solo fusionados</label>
+    <label class="chk"><input type="checkbox" id="onlyMoved"> Con movimientos</label>
+    <label class="chk"><input type="checkbox" id="onlyInferred"> Nombre a revisar</label>
+    <label class="chk"><input type="checkbox" id="onlySinDato"> Sin dato de stock</label>
   </div>
 </header>
 
 <div class="overlay" id="overlayUser">
   <div class="modal">
-    <h2 data-i18n="identificarse">Identificarse</h2>
+    <h2>Identificarse</h2>
     <div id="userLoggedView" style="display:none;">
-      <p class="m-specs"><span data-i18n="sesionActivaComo">Sesión activa como</span> <b id="userLoggedName"></b>.</p>
-      <div class="actions"><button class="btn btn-secondary" id="btnLogout" data-i18n="cerrarSesion">Cerrar sesión</button></div>
+      <p class="m-specs">Sesión activa como <b id="userLoggedName"></b>.</p>
+      <div class="actions"><button class="btn btn-secondary" id="btnLogout">Cerrar sesión</button></div>
     </div>
     <div id="userLoginView">
-      <label data-i18n="tuPinPersonal">Tu PIN personal</label>
+      <label>Tu PIN personal</label>
       <input type="password" id="loginPinInput" inputmode="numeric" maxlength="6" placeholder="****">
       <div class="err" id="loginErr"></div>
       <div class="actions">
-        <button class="btn btn-secondary" id="userCancel" data-i18n="cancelar">Cancelar</button>
-        <button class="btn btn-primary" id="loginConfirm" data-i18n="entrar">Entrar</button>
+        <button class="btn btn-secondary" id="userCancel">Cancelar</button>
+        <button class="btn btn-primary" id="loginConfirm">Entrar</button>
       </div>
       <hr style="margin:16px 0;border:none;border-top:1px solid var(--line);">
-      <p class="m-specs" data-i18n="nuevoEmpleado">¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.</p>
+      <p class="m-specs">¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.</p>
     </div>
   </div>
 </div>
@@ -245,44 +221,28 @@
 </div>
 
 <div id="viewPedidos" style="display:none;" class="hist-wrap">
-  <div id="pedidosLockedMsg" class="hist-empty" style="display:none;">🔒 <span data-i18n="necesitasPinMaestro">Necesitas el PIN maestro para ver los pedidos pendientes.</span></div>
+  <div id="pedidosLockedMsg" class="hist-empty" style="display:none;">🔒 Necesitas el PIN maestro para ver los pedidos pendientes.</div>
   <div id="pedidosContent"></div>
 </div>
 
 <div id="viewUsuarios" style="display:none;" class="hist-wrap">
   <div class="form-card">
-    <h2 data-i18n="crearNuevoUsuario">Crear nuevo usuario</h2>
-    <p class="hint" data-i18n="hintCrearUsuario">Da de alta a un empleado con su propio PIN personal para que pueda identificarse al registrar movimientos.</p>
-    <label data-i18n="nombreEmpleado">Nombre del empleado</label>
-    <input type="text" id="newUserName" data-i18n-placeholder="ejCarlos" placeholder="ej. Carlos">
-    <label data-i18n="pinPersonalLabel">PIN personal (4 dígitos, para su uso diario)</label>
+    <h2>Crear nuevo usuario</h2>
+    <p class="hint">Da de alta a un empleado con su propio PIN personal para que pueda identificarse al registrar movimientos.</p>
+    <label>Nombre del empleado</label>
+    <input type="text" id="newUserName" placeholder="ej. Carlos">
+    <label>PIN personal (4 dígitos, para su uso diario)</label>
     <input type="password" id="newUserPin" inputmode="numeric" maxlength="6" placeholder="ej. 1234">
-    <label data-i18n="pinMaestroLabel">PIN maestro (autoriza la creación — solo dirección)</label>
+    <label>PIN maestro (autoriza la creación — solo dirección)</label>
     <input type="password" id="newUserMasterPin" inputmode="numeric" maxlength="6" placeholder="****">
     <div class="err" id="createUserErr"></div>
     <div class="actions">
-      <button class="btn btn-primary" id="createUserConfirm" data-i18n="crearUsuario">Crear usuario</button>
+      <button class="btn btn-primary" id="createUserConfirm">Crear usuario</button>
     </div>
   </div>
   <hr class="section-divider">
-  <h2 class="section-title" data-i18n="usuariosExistentes">Usuarios existentes</h2>
+  <h2 class="section-title">Usuarios existentes</h2>
   <div id="usuariosListado"></div>
-</div>
-
-<div id="viewDeptos" style="display:none;" class="hist-wrap">
-  <div class="form-card">
-    <h2 data-i18n="crearDepto">Crear departamento / destino</h2>
-    <p class="hint" data-i18n="hintCrearDepto">Estos aparecen como sugerencias al registrar un movimiento (área de destino).</p>
-    <label data-i18n="nombreDepto">Nombre del departamento</label>
-    <input type="text" id="newDeptoName" data-i18n-placeholder="ejCocina" placeholder="ej. Cocina Principal">
-    <div class="err" id="createDeptoErr"></div>
-    <div class="actions">
-      <button class="btn btn-primary" id="createDeptoConfirm" data-i18n="crearDeptoBtn">Crear departamento</button>
-    </div>
-  </div>
-  <hr class="section-divider">
-  <h2 class="section-title" data-i18n="deptosExistentes">Departamentos existentes</h2>
-  <div id="deptosListado"></div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -290,56 +250,56 @@
     <h2 id="mProd"></h2>
     <div class="m-specs" id="mSpecs"></div>
     <div class="photo-row">
-      <div class="photo-preview" id="mPhotoPreview"><span class="noimg" data-i18n="sinFoto">sin foto</span></div>
+      <div class="photo-preview" id="mPhotoPreview"><span class="noimg">sin foto</span></div>
       <div class="photo-actions">
-        <button class="photo-flag-btn" id="mFlagPhoto">⚠ <span data-i18n="reportarFoto">Reportar foto incorrecta</span></button>
-        <button class="camera-btn" id="mTakePhoto">📸 <span data-i18n="tomarCambiarFoto">Tomar / cambiar foto</span></button>
+        <button class="photo-flag-btn" id="mFlagPhoto">⚠ Reportar foto incorrecta</button>
+        <button class="camera-btn" id="mTakePhoto">📸 Tomar / cambiar foto</button>
         <input type="file" accept="image/*" capture="environment" id="mCameraInput" style="display:none;">
       </div>
     </div>
-    <div class="disp-line"><span data-i18n="disponibleActual">Disponible actual:</span> <b id="mDisp"></b> — <span data-i18n="origen">Origen:</span> <b id="mArea"></b></div>
+    <div class="disp-line">Disponible actual: <b id="mDisp"></b> — Origen: <b id="mArea"></b></div>
     <div class="user-line" id="mUserLine"></div>
 
     <div class="action-tabs">
-      <div class="action-tab active" id="atMov" data-i18n="movimiento">Movimiento</div>
-      <div class="action-tab" id="atCount" data-i18n="conteoFisico">Conteo físico</div>
+      <div class="action-tab active" id="atMov">Movimiento</div>
+      <div class="action-tab" id="atCount">Conteo físico</div>
     </div>
 
     <div class="section active" id="secMov">
-      <label data-i18n="areaDestinoLabel">Área de destino (escribe libremente o elige una sugerida)</label>
-      <input type="text" id="mDestino" list="areaSuggestions" data-i18n-placeholder="ejPrestige" placeholder="ej. Prestige Bar, Habitación 204...">
+      <label>Área de destino (escribe libremente o elige una sugerida)</label>
+      <input type="text" id="mDestino" list="areaSuggestions" placeholder="ej. Prestige Bar, Habitación 204...">
       <datalist id="areaSuggestions"></datalist>
-      <label data-i18n="cantidadSolicitar">Cantidad a solicitar</label>
+      <label>Cantidad a solicitar</label>
       <input type="number" id="mCantidad" min="1" step="1" placeholder="ej. 5">
-      <div class="pin-note" data-i18n="notaPendiente">La solicitud quedará <b>pendiente</b> hasta que un administrador la apruebe con el PIN maestro.</div>
+      <div class="pin-note">La solicitud quedará <b>pendiente</b> hasta que un administrador la apruebe con el PIN maestro.</div>
     </div>
 
     <div class="section" id="secCount">
-      <label data-i18n="tuNombreRegistro">Tu nombre (para el registro)</label>
+      <label>Tu nombre (para el registro)</label>
       <input type="text" id="mQuien" placeholder="ej. Miriana">
-      <label data-i18n="cantidadContada">Cantidad real contada (reemplaza el disponible actual)</label>
+      <label>Cantidad real contada (reemplaza el disponible actual)</label>
       <input type="number" id="mConteo" min="0" step="1" placeholder="ej. 42">
-      <div class="pin-note" id="countLockNote">🔒 <span data-i18n="conteoBloqueado">Modo conteo bloqueado — actívalo con el botón "Reconteo" arriba.</span></div>
+      <div class="pin-note" id="countLockNote">🔒 Modo conteo bloqueado — actívalo con el botón "Reconteo" arriba.</div>
     </div>
 
     <div class="err" id="mErr"></div>
     <div class="actions">
-      <button class="btn btn-secondary" id="mCancel" data-i18n="cancelar">Cancelar</button>
-      <button class="btn btn-primary" id="mConfirm" data-i18n="registrarMovimiento">Registrar movimiento</button>
+      <button class="btn btn-secondary" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mConfirm">Registrar movimiento</button>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="overlayPin">
   <div class="modal">
-    <h2 data-i18n="activarModoConteo">Activar modo conteo</h2>
-    <p class="m-specs" data-i18n="introducePinAdmin">Introduce el PIN de administrador. Quedará activo para todos los artículos hasta que lo bloquees o cierres la página.</p>
-    <label data-i18n="pinLabel">PIN</label>
+    <h2>Activar modo conteo</h2>
+    <p class="m-specs">Introduce el PIN de administrador. Quedará activo para todos los artículos hasta que lo bloquees o cierres la página.</p>
+    <label>PIN</label>
     <input type="password" id="pinInput" inputmode="numeric" maxlength="4" placeholder="****">
     <div class="err" id="pinErr"></div>
     <div class="actions">
-      <button class="btn btn-secondary" id="pinCancel" data-i18n="cancelar">Cancelar</button>
-      <button class="btn btn-primary" id="pinConfirm" data-i18n="activar">Activar</button>
+      <button class="btn btn-secondary" id="pinCancel">Cancelar</button>
+      <button class="btn btn-primary" id="pinConfirm">Activar</button>
     </div>
   </div>
 </div>
@@ -561,88 +521,6 @@ function fotoDe(it){
   return photoOverrides[it.id] || it.img || null;
 }
 
-function rangoFechas(){
-  const desdeVal = document.getElementById('repDesde').value;
-  const hastaVal = document.getElementById('repHasta').value;
-  const desde = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
-  const hasta = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
-  return { desde, hasta };
-}
-
-function generarReporteExcel(){
-  const { desde, hasta } = rangoFechas();
-
-  const filas = allItems().map(it => {
-    // solo movimientos tipo 'pedido' ya aprobados (descontados de verdad), dentro del rango
-    const transfers = movements.filter(m => {
-      if(m.itemId !== it.id || m.tipo !== 'pedido' || m.estado !== 'aprobado') return false;
-      const fecha = new Date(m.ts);
-      if(desde && fecha < desde) return false;
-      if(hasta && fecha > hasta) return false;
-      return true;
-    });
-    const totalTransferido = transfers.reduce((sum, m) => sum + (Number(m.cantidad) || 0), 0);
-    const destinos = [...new Set(transfers.map(m => m.destino).filter(Boolean))].join(', ');
-
-    const stockFinal = disponibleDe(it);
-    const stockFinalNum = (stockFinal === null || stockFinal === undefined) ? 0 : Number(stockFinal);
-    // reconstruccion: el stock inicial del periodo = stock actual + lo transferido dentro del periodo
-    // (asume que no hubo reconteos de PIN admin dentro del rango que alteren la base)
-    const stockInicial = (desde || hasta) ? (stockFinalNum + totalTransferido) : (it.disponibleInicial ?? 0);
-
-    return {
-      'Código': it.codigos,
-      'Producto': it.producto || '(sin nombre)',
-      'Categoría': it.area,
-      'Stock Inicial': stockInicial,
-      'Total Transferido': totalTransferido,
-      'Stock Final': stockFinal === null || stockFinal === undefined ? '' : stockFinal,
-      'Transferido a': destinos || '—'
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(filas);
-  ws['!cols'] = [
-    { wch: 14 }, { wch: 40 }, { wch: 22 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 40 }
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Reporte inventario');
-
-  const desdeTxt = document.getElementById('repDesde').value || 'inicio';
-  const hastaTxt = document.getElementById('repHasta').value || new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `reporte-inventario-${desdeTxt}_a_${hastaTxt}.xlsx`);
-}
-
-function fmtDate(d){ return d.toISOString().slice(0,10); }
-
-document.getElementById('btnExportReport').addEventListener('click', generarReporteExcel);
-
-document.getElementById('repUlt7').addEventListener('click', () => {
-  const hoy = new Date();
-  const hace7 = new Date(); hace7.setDate(hoy.getDate() - 7);
-  document.getElementById('repDesde').value = fmtDate(hace7);
-  document.getElementById('repHasta').value = fmtDate(hoy);
-});
-
-document.getElementById('repUlt15').addEventListener('click', () => {
-  const hoy = new Date();
-  const hace15 = new Date(); hace15.setDate(hoy.getDate() - 15);
-  document.getElementById('repDesde').value = fmtDate(hace15);
-  document.getElementById('repHasta').value = fmtDate(hoy);
-});
-
-document.getElementById('repMes').addEventListener('click', () => {
-  const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  document.getElementById('repDesde').value = fmtDate(inicioMes);
-  document.getElementById('repHasta').value = fmtDate(hoy);
-});
-
-document.getElementById('repTodo').addEventListener('click', () => {
-  document.getElementById('repDesde').value = '';
-  document.getElementById('repHasta').value = '';
-});
-
 function allItems(){
   return DATA.concat(extraItems);
 }
@@ -690,15 +568,15 @@ function render(){
     return true;
   });
 
-  countEl.textContent = filtered.length + ' ' + (filtered.length===1?t('resultados'):t('resultadosPl'));
+  countEl.textContent = filtered.length + ' resultado' + (filtered.length===1?'':'s');
 
   if(filtered.length === 0){
-    grid.innerHTML = `<div class="empty">${t('sinResultados')}</div>`;
+    grid.innerHTML = '<div class="empty">Sin resultados.</div>';
     return;
   }
 
   const frag = document.createDocumentFragment();
-  filtered.forEach(it => {
+  filtered.slice(0,400).forEach(it => {
     const disp = disponibleDe(it);
     const sinDato = disp === null || disp === undefined;
     const foto = fotoDe(it);
@@ -706,16 +584,16 @@ function render(){
     card.className = 'card' + (it.fusionado?' fusion':'') + (!sinDato && disp<=0?' agotado':'') + (sinDato?' sindato':'');
     card.dataset.id = it.id;
     const dispLine = sinDato
-      ? `<div class="disponible sindato-txt">${t('sinDatoUsarConteo')}</div>`
-      : `<div class="disponible ${disp>0?'pos':'neg'}">${t('disponibleCard')} ${fmtNum(disp)}</div>`;
+      ? '<div class="disponible sindato-txt">Sin dato — usar Conteo físico</div>'
+      : `<div class="disponible ${disp>0?'pos':'neg'}">Disponible: ${fmtNum(disp)}</div>`;
     card.innerHTML = `
-      <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : `<span class="noimg">${t('sinFoto')}</span>`}</div>
+      <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : '<span class="noimg">sin foto</span>'}</div>
       <div class="body">
         <span class="area-tag">${it.area}</span>
         <div class="prod">${it.producto || '(sin nombre)'}</div>
         <div class="specs">${it.specs || ''}</div>
         <div class="codes">${it.codigos}</div>
-        <div class="stocks"><span>${t('reqCard')} <b>${fmtNum(it.qtyReq)}</b></span></div>
+        <div class="stocks"><span>Req: <b>${fmtNum(it.qtyReq)}</b></span></div>
         ${dispLine}
         ${it.fusionado ? '<div class="fusion-badge">⚠ códigos fusionados</div>' : ''}
         ${it.nombreInferido ? '<div class="infer-badge">✎ nombre recuperado — revisar</div>' : ''}
@@ -1230,25 +1108,7 @@ document.getElementById('btnLogout').addEventListener('click', () => {
   refreshUserUI();
 });
 
-// Confirma que el guardado realmente se propago en Cloudflare KV releyendo
-// varias veces con espera. KV es "eventual consistency": un saveState() exitoso
-// no garantiza que una lectura inmediata (ej. tras F5) ya vea el dato.
-async function confirmUserSaved(pin, maxTries, delayMs){
-  for(let i=0; i<maxTries; i++){
-    await new Promise(r => setTimeout(r, delayMs));
-    try{
-      const r = await window.storage.get('inventory_state', true);
-      if(r){
-        const s = JSON.parse(r.value);
-        if((s.users||[]).some(u => u.pin === pin)) return true;
-      }
-    }catch(e){ /* seguir intentando */ }
-  }
-  return false;
-}
-
 document.getElementById('createUserConfirm').addEventListener('click', async () => {
-  const btn = document.getElementById('createUserConfirm');
   const name = document.getElementById('newUserName').value.trim();
   const pin = document.getElementById('newUserPin').value.trim();
   const masterPin = document.getElementById('newUserMasterPin').value.trim();
@@ -1268,41 +1128,21 @@ document.getElementById('createUserConfirm').addEventListener('click', async () 
     errEl.textContent = 'Ese PIN ya está en uso por otro empleado.'; errEl.style.display='block'; return;
   }
   users.push({ name, pin });
-  btn.disabled = true; btn.textContent = 'Guardando...';
-  let ok = await saveState();
+  const ok = await saveState();
   if(!ok){
-    btn.disabled = false; btn.textContent = 'Crear usuario';
     errEl.textContent = '✗ No se pudo guardar: ' + (lastSaveError || 'revisa tu conexión') + '.'; errEl.style.display='block';
     users.pop();
     return;
   }
-
-  btn.textContent = 'Confirmando...';
-  let confirmed = await confirmUserSaved(pin, 4, 1200);
-  if(!confirmed){
-    // reintentar guardar una vez mas por si la primera escritura se perdio
-    ok = await saveState();
-    confirmed = ok && await confirmUserSaved(pin, 4, 1500);
-  }
-  btn.disabled = false; btn.textContent = 'Crear usuario';
-
-  if(!confirmed){
-    errEl.textContent = '⚠️ Guardado enviado pero no se pudo confirmar la propagación. Espera unos segundos y vuelve a comprobar antes de cerrar esta pestaña; no borres el usuario.';
-    errEl.style.display = 'block';
-    errEl.style.color = '#8a5a00';
-    renderUsuarios();
-    return;
-  }
-
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserPin').value = '';
   document.getElementById('newUserMasterPin').value = '';
   loginErr.textContent = ''; loginErr.style.display = 'none';
-  errEl.textContent = '✓ Usuario creado y confirmado en la nube.';
+  errEl.textContent = '✓ Usuario creado correctamente.';
   errEl.style.display = 'block';
   errEl.style.color = 'var(--ok)';
   renderUsuarios();
-  alert('✓ Usuario "' + name + '" guardado y confirmado.');
+  alert('✓ Usuario "' + name + '" guardado correctamente en la nube.');
 });
 
 // ===================== Pedidos pendientes (aprobacion con PIN maestro) =====================
@@ -1431,12 +1271,10 @@ const tabBuscar = document.getElementById('tabBuscar');
 const tabHist = document.getElementById('tabHist');
 const tabPedidos = document.getElementById('tabPedidos');
 const tabUsuarios = document.getElementById('tabUsuarios');
-const tabDeptos = document.getElementById('tabDeptos');
 const viewBuscar = document.getElementById('viewBuscar');
 const viewHist = document.getElementById('viewHist');
 const viewPedidos = document.getElementById('viewPedidos');
 const viewUsuarios = document.getElementById('viewUsuarios');
-const viewDeptos = document.getElementById('viewDeptos');
 const filterRow = document.getElementById('filterRow');
 
 function renderUsuarios(){
@@ -1451,79 +1289,9 @@ function renderUsuarios(){
     '</div>';
 }
 
-function renderDeptos(){
-  const el = document.getElementById('deptosListado');
-  if(!el) return;
-  if(hotelAreas.length === 0){
-    el.innerHTML = '<div class="hist-empty">Aún no hay departamentos creados.</div>';
-    return;
-  }
-  el.innerHTML = hotelAreas.map((d, i) => `
-    <div class="depto-row" data-idx="${i}">
-      <span class="depto-name">${d}</span>
-      <button class="depto-edit-btn" data-idx="${i}">✎</button>
-      <button class="depto-del-btn" data-idx="${i}">🗑</button>
-    </div>`).join('');
-
-  el.querySelectorAll('.depto-edit-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      const actual = hotelAreas[idx];
-      const nuevo = prompt('Editar nombre del departamento:', actual);
-      if(nuevo === null) return;
-      const limpio = nuevo.trim();
-      if(!limpio){ alert('El nombre no puede estar vacío.'); return; }
-      if(hotelAreas.some((a,i) => i !== idx && a.toLowerCase() === limpio.toLowerCase())){
-        alert('Ya existe un departamento con ese nombre.'); return;
-      }
-      const anterior = hotelAreas[idx];
-      hotelAreas[idx] = limpio;
-      const ok = await saveState();
-      if(!ok){ hotelAreas[idx] = anterior; alert('No se pudo guardar el cambio. Intenta de nuevo.'); return; }
-      updateAreaSuggestions();
-      renderDeptos();
-    });
-  });
-  el.querySelectorAll('.depto-del-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      const nombre = hotelAreas[idx];
-      if(!confirm(`¿Borrar el departamento "${nombre}"? Esto no afecta movimientos ya registrados.`)) return;
-      const respaldo = hotelAreas.slice();
-      hotelAreas.splice(idx, 1);
-      const ok = await saveState();
-      if(!ok){ hotelAreas = respaldo; alert('No se pudo guardar el cambio. Intenta de nuevo.'); return; }
-      updateAreaSuggestions();
-      renderDeptos();
-    });
-  });
-}
-
-document.getElementById('createDeptoConfirm').addEventListener('click', async () => {
-  const input = document.getElementById('newDeptoName');
-  const errEl = document.getElementById('createDeptoErr');
-  errEl.style.display = 'none';
-  const nombre = input.value.trim();
-  if(!nombre){ errEl.textContent = 'Indica un nombre.'; errEl.style.display = 'block'; return; }
-  if(hotelAreas.some(a => a.toLowerCase() === nombre.toLowerCase())){
-    errEl.textContent = 'Ese departamento ya existe.'; errEl.style.display = 'block'; return;
-  }
-  hotelAreas.push(nombre);
-  const ok = await saveState();
-  if(!ok){
-    hotelAreas.pop();
-    errEl.textContent = '✗ No se pudo guardar: ' + (lastSaveError || 'revisa tu conexión') + '.';
-    errEl.style.display = 'block';
-    return;
-  }
-  input.value = '';
-  updateAreaSuggestions();
-  renderDeptos();
-});
-
 function hideAllViews(){
-  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active');
-  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none';
+  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active');
+  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none';
   filterRow.style.display='none';
 }
 tabBuscar.addEventListener('click', () => {
@@ -1561,15 +1329,6 @@ tabUsuarios.addEventListener('click', async () => {
   document.getElementById('createUserErr').style.display = 'none';
   await loadState();
   renderUsuarios();
-});
-
-tabDeptos.addEventListener('click', async () => {
-  hideAllViews();
-  tabDeptos.classList.add('active');
-  viewDeptos.style.display='block';
-  document.getElementById('createDeptoErr').style.display = 'none';
-  await loadState();
-  renderDeptos();
 });
 
 search.addEventListener('input', render);
@@ -1825,157 +1584,87 @@ btnSync.addEventListener('click', async () => {
   renderHist();
   renderSyncStatus();
 })();
-const I18N = {
-  es: {
-    titulo: 'Inventario Hotel',
-    subtitulo: '1871 items · 34 áreas · toca un item para registrar un movimiento',
-    notaCompartido: 'Movimientos compartidos — visibles para todos los que usen este artefacto',
-    tabBuscador: 'Buscador', tabHistorial: 'Historial', tabPedidos: 'Pedidos',
-    tabUsuarios: 'Usuarios', tabDeptos: 'Departamentos', tabReconteo: 'Reconteo', tabSync: 'Sync',
-    etiquetaReporte: 'Reporte:', rep7dias: '7 días', rep15dias: '15 días', repMes: 'Este mes', repTodo: 'Todo',
-    exportarExcel: 'Exportar Excel', identificarse: 'Identificarse',
-    reconteoActivo: 'Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.',
-    buscarPlaceholder: 'Buscar por código, nombre o categoría...', todasCategorias: 'Todas las categorías',
-    soloFusionados: 'Solo fusionados', conMovimientos: 'Con movimientos',
-    nombreARevisar: 'Nombre a revisar', sinDatoStock: 'Sin dato de stock',
-    sesionActivaComo: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
-    tuPinPersonal: 'Tu PIN personal', cancelar: 'Cancelar', entrar: 'Entrar',
-    nuevoEmpleado: '¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.',
-    necesitasPinMaestro: 'Necesitas el PIN maestro para ver los pedidos pendientes.',
-    crearNuevoUsuario: 'Crear nuevo usuario',
-    hintCrearUsuario: 'Da de alta a un empleado con su propio PIN personal para que pueda identificarse al registrar movimientos.',
-    nombreEmpleado: 'Nombre del empleado', ejCarlos: 'ej. Carlos',
-    pinPersonalLabel: 'PIN personal (4 dígitos, para su uso diario)',
-    pinMaestroLabel: 'PIN maestro (autoriza la creación — solo dirección)',
-    crearUsuario: 'Crear usuario', usuariosExistentes: 'Usuarios existentes',
-    crearDepto: 'Crear departamento / destino',
-    hintCrearDepto: 'Estos aparecen como sugerencias al registrar un movimiento (área de destino).',
-    nombreDepto: 'Nombre del departamento', ejCocina: 'ej. Cocina Principal',
-    crearDeptoBtn: 'Crear departamento', deptosExistentes: 'Departamentos existentes',
-    sinFoto: 'sin foto', reportarFoto: 'Reportar foto incorrecta', tomarCambiarFoto: 'Tomar / cambiar foto',
-    disponibleActual: 'Disponible actual:', origen: 'Origen:',
-    movimiento: 'Movimiento', conteoFisico: 'Conteo físico',
-    areaDestinoLabel: 'Área de destino (escribe libremente o elige una sugerida)',
-    ejPrestige: 'ej. Prestige Bar, Habitación 204...', cantidadSolicitar: 'Cantidad a solicitar',
-    notaPendiente: 'La solicitud quedará <b>pendiente</b> hasta que un administrador la apruebe con el PIN maestro.',
-    tuNombreRegistro: 'Tu nombre (para el registro)', cantidadContada: 'Cantidad real contada (reemplaza el disponible actual)',
-    conteoBloqueado: 'Modo conteo bloqueado — actívalo con el botón "Reconteo" arriba.',
-    registrarMovimiento: 'Registrar movimiento', activarModoConteo: 'Activar modo conteo',
-    introducePinAdmin: 'Introduce el PIN de administrador. Quedará activo para todos los artículos hasta que lo bloquees o cierres la página.',
-    pinLabel: 'PIN', activar: 'Activar',
-    resultados: 'resultado', resultadosPl: 'resultados', sinResultados: 'Sin resultados.',
-    sinDatoUsarConteo: 'Sin dato — usar Conteo físico', disponibleCard: 'Disponible:', reqCard: 'Req:'
+</script>
+/* ============ RBAC — pegar antes de </body>, después del script principal ============ */
+const ROLES = {
+  MASTER: 'MASTER',
+  DEPARTAMENTO: 'DEPARTAMENTO',
+  ALMACENISTA: 'ALMACENISTA'
+};
+
+const PERMS = {
+  MASTER: {
+    userCRUD: true, deptCRUD: true, productCRUD: true, stockAjusteManual: true,
+    pedidosGlobal: true, verHistorialCompleto: true, exportar: true,
+    crearMovProducto: true, editarStockInicial: true, verSoloPropioDepto: false
   },
-  en: {
-    titulo: 'Hotel Inventory',
-    subtitulo: '1871 items · 34 areas · tap an item to log a movement',
-    notaCompartido: 'Shared movements — visible to everyone using this artifact',
-    tabBuscador: 'Search', tabHistorial: 'History', tabPedidos: 'Orders',
-    tabUsuarios: 'Users', tabDeptos: 'Departments', tabReconteo: 'Recount', tabSync: 'Sync',
-    etiquetaReporte: 'Report:', rep7dias: '7 days', rep15dias: '15 days', repMes: 'This month', repTodo: 'All',
-    exportarExcel: 'Export Excel', identificarse: 'Sign in',
-    reconteoActivo: 'Recount active — filter by code, name or category (area) below to locate each item.',
-    buscarPlaceholder: 'Search by code, name or category...', todasCategorias: 'All categories',
-    soloFusionados: 'Merged only', conMovimientos: 'With movements',
-    nombreARevisar: 'Name to review', sinDatoStock: 'No stock data',
-    sesionActivaComo: 'Signed in as', cerrarSesion: 'Sign out',
-    tuPinPersonal: 'Your personal PIN', cancelar: 'Cancel', entrar: 'Enter',
-    nuevoEmpleado: 'New employee? Go to the "👥 Users" tab above to create one.',
-    necesitasPinMaestro: 'You need the master PIN to view pending orders.',
-    crearNuevoUsuario: 'Create new user',
-    hintCrearUsuario: 'Register an employee with their own personal PIN so they can identify themselves when logging movements.',
-    nombreEmpleado: 'Employee name', ejCarlos: 'e.g. Carlos',
-    pinPersonalLabel: 'Personal PIN (4 digits, for daily use)',
-    pinMaestroLabel: 'Master PIN (authorizes creation — management only)',
-    crearUsuario: 'Create user', usuariosExistentes: 'Existing users',
-    crearDepto: 'Create department / destination',
-    hintCrearDepto: 'These appear as suggestions when logging a movement (destination area).',
-    nombreDepto: 'Department name', ejCocina: 'e.g. Main Kitchen',
-    crearDeptoBtn: 'Create department', deptosExistentes: 'Existing departments',
-    sinFoto: 'no photo', reportarFoto: 'Report wrong photo', tomarCambiarFoto: 'Take / change photo',
-    disponibleActual: 'Current available:', origen: 'Origin:',
-    movimiento: 'Movement', conteoFisico: 'Physical count',
-    areaDestinoLabel: 'Destination area (type freely or pick a suggestion)',
-    ejPrestige: 'e.g. Prestige Bar, Room 204...', cantidadSolicitar: 'Quantity to request',
-    notaPendiente: 'The request will remain <b>pending</b> until an administrator approves it with the master PIN.',
-    tuNombreRegistro: 'Your name (for the record)', cantidadContada: 'Actual counted quantity (replaces current available)',
-    conteoBloqueado: 'Count mode locked — activate it with the "Recount" button above.',
-    registrarMovimiento: 'Log movement', activarModoConteo: 'Activate count mode',
-    introducePinAdmin: 'Enter the admin PIN. It will stay active for all items until you lock it or close the page.',
-    pinLabel: 'PIN', activar: 'Activate',
-    resultados: 'result', resultadosPl: 'results', sinResultados: 'No results.',
-    sinDatoUsarConteo: 'No data — use Physical count', disponibleCard: 'Available:', reqCard: 'Req:'
+  DEPARTAMENTO: {
+    userCRUD: false, deptCRUD: false, productCRUD: false, stockAjusteManual: false,
+    pedidosGlobal: false, verHistorialCompleto: false, exportar: false,
+    crearMovProducto: false, editarStockInicial: false, verSoloPropioDepto: true
   },
-  sw: {
-    titulo: 'Hesabu ya Hoteli',
-    subtitulo: 'Vitu 1871 · maeneo 34 · gusa kipengele kusajili uhamisho',
-    notaCompartido: 'Uhamisho unaoshirikiwa — unaonekana kwa wote wanaotumia programu hii',
-    tabBuscador: 'Tafuta', tabHistorial: 'Historia', tabPedidos: 'Maombi',
-    tabUsuarios: 'Watumiaji', tabDeptos: 'Idara', tabReconteo: 'Hesabu upya', tabSync: 'Sync',
-    etiquetaReporte: 'Ripoti:', rep7dias: 'Siku 7', rep15dias: 'Siku 15', repMes: 'Mwezi huu', repTodo: 'Zote',
-    exportarExcel: 'Hamisha Excel', identificarse: 'Ingia',
-    reconteoActivo: 'Hesabu upya imewashwa — chuja kwa msimbo, jina au aina (eneo) hapa chini kupata kila kipengele.',
-    buscarPlaceholder: 'Tafuta kwa msimbo, jina au aina...', todasCategorias: 'Aina zote',
-    soloFusionados: 'Zilizounganishwa tu', conMovimientos: 'Na uhamisho',
-    nombreARevisar: 'Jina la kukagua', sinDatoStock: 'Hakuna data ya hisa',
-    sesionActivaComo: 'Umeingia kama', cerrarSesion: 'Toka',
-    tuPinPersonal: 'PIN yako binafsi', cancelar: 'Ghairi', entrar: 'Ingia',
-    nuevoEmpleado: 'Mfanyakazi mpya? Nenda kwenye kichupo "👥 Watumiaji" hapo juu kumtengeneza.',
-    necesitasPinMaestro: 'Unahitaji PIN kuu kuona maombi yanayosubiri.',
-    crearNuevoUsuario: 'Unda mtumiaji mpya',
-    hintCrearUsuario: 'Sajili mfanyakazi na PIN yake binafsi ili aweze kujitambulisha anaposajili uhamisho.',
-    nombreEmpleado: 'Jina la mfanyakazi', ejCarlos: 'mfano Carlos',
-    pinPersonalLabel: 'PIN binafsi (tarakimu 4, matumizi ya kila siku)',
-    pinMaestroLabel: 'PIN kuu (inaruhusu kuunda — uongozi tu)',
-    crearUsuario: 'Unda mtumiaji', usuariosExistentes: 'Watumiaji waliopo',
-    crearDepto: 'Unda idara / marudio',
-    hintCrearDepto: 'Hizi zinaonekana kama mapendekezo unaposajili uhamisho (eneo la marudio).',
-    nombreDepto: 'Jina la idara', ejCocina: 'mfano Jiko Kuu',
-    crearDeptoBtn: 'Unda idara', deptosExistentes: 'Idara zilizopo',
-    sinFoto: 'hakuna picha', reportarFoto: 'Ripoti picha isiyo sahihi', tomarCambiarFoto: 'Piga / badilisha picha',
-    disponibleActual: 'Inayopatikana sasa:', origen: 'Chanzo:',
-    movimiento: 'Uhamisho', conteoFisico: 'Hesabu halisi',
-    areaDestinoLabel: 'Eneo la marudio (andika kwa uhuru au chagua pendekezo)',
-    ejPrestige: 'mfano Prestige Bar, Chumba 204...', cantidadSolicitar: 'Kiasi cha kuomba',
-    notaPendiente: 'Ombi litabaki <b>likisubiri</b> hadi msimamizi alikubali kwa PIN kuu.',
-    tuNombreRegistro: 'Jina lako (kwa rekodi)', cantidadContada: 'Kiasi halisi kilichohesabiwa (kinabadilisha kinachopatikana sasa)',
-    conteoBloqueado: 'Hali ya kuhesabu imefungwa — iwashe na kitufe cha "Hesabu upya" hapo juu.',
-    registrarMovimiento: 'Sajili uhamisho', activarModoConteo: 'Washa hali ya kuhesabu',
-    introducePinAdmin: 'Weka PIN ya msimamizi. Itabaki hai kwa vitu vyote hadi uifunge au ufunge ukurasa.',
-    pinLabel: 'PIN', activar: 'Washa',
-    resultados: 'matokeo', resultadosPl: 'matokeo', sinResultados: 'Hakuna matokeo.',
-    sinDatoUsarConteo: 'Hakuna data — tumia Hesabu halisi', disponibleCard: 'Inapatikana:', reqCard: 'Hitaji:'
+  ALMACENISTA: {
+    userCRUD: false, deptCRUD: false, productCRUD: true, stockAjusteManual: false,
+    pedidosGlobal: true, verHistorialCompleto: true, exportar: true,
+    crearMovProducto: true, editarStockInicial: false, verSoloPropioDepto: false
   }
 };
 
-let currentLang = localStorage.getItem('appLang') || 'es';
-
-function t(key){
-  return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key;
+function can(perm){
+  const role = (currentUser && currentUser.role) || null;
+  if(!role) return false;
+  return !!PERMS[role][perm];
 }
 
-function applyLanguage(lang){
-  currentLang = lang;
-  localStorage.setItem('appLang', lang);
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    el.innerHTML = t(key);
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    el.setAttribute('placeholder', t(key));
-  });
-  if(typeof render === 'function') render();
+// currentUser se fija al iniciar sesión. Extiende tu objeto "users" con { name, pin, role, departamentoId }
+let currentUser = null;
+
+function setCurrentUserFromPin(pin){
+  const u = users.find(u => u.pin === pin);
+  if(u) currentUser = { name: u.name, role: u.role || ROLES.DEPARTAMENTO, departamentoId: u.departamentoId || null };
+  return currentUser;
 }
 
-document.getElementById('langSelector').addEventListener('change', (e) => {
-  applyLanguage(e.target.value);
-});
+// ===== Fórmula de stock (nunca sobrescribe stockAlmacen3 = stock_inicial) =====
+// movements: array existente en la app, cada mov tiene { itemId, tipo: 'entrada'|'salida'|'ajuste', cantidad }
+function stockActualDe(it){
+  const inicial = it.stockAlmacen3 || 0;
+  const movs = movements.filter(m => m.itemId === it.id);
+  let entradas = 0, salidas = 0, ajustes = 0;
+  movs.forEach(m => {
+    if(m.tipo === 'entrada') entradas += m.cantidad;
+    else if(m.tipo === 'salida') salidas += m.cantidad;
+    else if(m.tipo === 'ajuste') ajustes += m.cantidad; // puede ser + o -
+  });
+  return inicial + entradas - salidas + ajustes;
+}
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('langSelector').value = currentLang;
-  applyLanguage(currentLang);
-});
-</script>
+// Bloquea cualquier intento de escribir en stockAlmacen3 fuera de MASTER
+function intentarEditarStockInicial(it, nuevoValor){
+  if(!can('editarStockInicial')){
+    alert('No tienes permiso para modificar el stock inicial (histórico e inmutable).');
+    return false;
+  }
+  it.stockAlmacen3 = nuevoValor;
+  return true;
+}
+
+// ===== Visibilidad de UI según rol =====
+function aplicarVisibilidadRBAC(){
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    const perm = el.getAttribute('data-perm');
+    el.style.display = can(perm) ? '' : 'none';
+  });
+  // Pedidos: si es DEPARTAMENTO, filtrar solo los suyos
+}
+
+function filtrarPedidosPorRol(pendientes){
+  if(can('pedidosGlobal')) return pendientes;
+  if(currentUser && currentUser.departamentoId){
+    return pendientes.filter(m => m.departamentoId === currentUser.departamentoId);
+  }
+  return pendientes.filter(m => m.quien === (currentUser && currentUser.name));
+}
+/* ============ FIN RBAC ============ */
 </body>
 </html>
