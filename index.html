@@ -619,7 +619,7 @@ function render(){
   }
 
   const frag = document.createDocumentFragment();
-  filtered.slice(0,400).forEach(it => {
+  filtered.forEach(it => {
     const disp = disponibleDe(it);
     const sinDato = disp === null || disp === undefined;
     const foto = fotoDe(it);
