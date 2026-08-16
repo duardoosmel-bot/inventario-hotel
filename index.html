@@ -1584,7 +1584,7 @@ btnSync.addEventListener('click', async () => {
   renderHist();
   renderSyncStatus();
 })();
-</script>
+
 /* ============ RBAC — pegar antes de </body>, después del script principal ============ */
 const ROLES = {
   MASTER: 'MASTER',
@@ -1666,5 +1666,6 @@ function filtrarPedidosPorRol(pendientes){
   return pendientes.filter(m => m.quien === (currentUser && currentUser.name));
 }
 /* ============ FIN RBAC ============ */
+</script>
 </body>
 </html>
