@@ -1,0 +1,10 @@
+{
+  "name": "inventario-hotel",
+  "compatibility_date": "2026-08-01",
+  "kv_namespaces": [
+    {
+      "binding": "STORAGE",
+      "id": "1683aad7504e4cb4a2313003cf5448c2"
+    }
+  ]
+}
