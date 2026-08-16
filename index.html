@@ -1617,7 +1617,7 @@ function can(perm){
 }
 
 // currentUser se fija al iniciar sesión. Extiende tu objeto "users" con { name, pin, role, departamentoId }
-let currentUser = null;
+// (currentUser ya existe en la app original, no se vuelve a declarar aquí)
 
 function setCurrentUserFromPin(pin){
   const u = users.find(u => u.pin === pin);
