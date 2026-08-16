@@ -133,6 +133,11 @@
   .user-chip{display:inline-flex;align-items:center;gap:7px;background:var(--accent-soft);color:var(--accent);
     padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;}
   .user-chip .ic{font-size:14px;}
+  .depto-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card,#fff);
+    border:1px solid var(--line,#e5e5e5);border-radius:10px;margin-bottom:8px;}
+  .depto-name{flex:1;font-size:14px;}
+  .depto-edit-btn,.depto-del-btn{border:none;background:none;font-size:16px;cursor:pointer;padding:4px 8px;}
+  .depto-del-btn{color:#c0392b;}
   .modal .section{display:none;}
   .modal .section.active{display:block;}
   .photo-flag-btn{background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;margin-top:6px;text-decoration:underline;display:block;padding:6px 0;touch-action:manipulation;}
@@ -172,6 +177,7 @@
     <button class="tabbtn" id="tabHist">Historial <span id="histCountBadge"></span></button>
     <button class="tabbtn pedidos-btn" id="tabPedidos">📋 Pedidos <span id="pedidosCountBadge"></span></button>
     <button class="tabbtn" id="tabUsuarios">👥 Usuarios</button>
+    <button class="tabbtn" id="tabDeptos">🏢 Departamentos</button>
     <button class="tabbtn count-btn" id="btnUnlockCount">🔒 Reconteo</button>
     <button class="tabbtn sync-btn" id="btnSync">🔄 Sync</button>
   </div>
@@ -254,6 +260,22 @@
   <hr class="section-divider">
   <h2 class="section-title">Usuarios existentes</h2>
   <div id="usuariosListado"></div>
+</div>
+
+<div id="viewDeptos" style="display:none;" class="hist-wrap">
+  <div class="form-card">
+    <h2>Crear departamento / destino</h2>
+    <p class="hint">Estos aparecen como sugerencias al registrar un movimiento (área de destino).</p>
+    <label>Nombre del departamento</label>
+    <input type="text" id="newDeptoName" placeholder="ej. Cocina Principal">
+    <div class="err" id="createDeptoErr"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="createDeptoConfirm">Crear departamento</button>
+    </div>
+  </div>
+  <hr class="section-divider">
+  <h2 class="section-title">Departamentos existentes</h2>
+  <div id="deptosListado"></div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -1402,10 +1424,12 @@ const tabBuscar = document.getElementById('tabBuscar');
 const tabHist = document.getElementById('tabHist');
 const tabPedidos = document.getElementById('tabPedidos');
 const tabUsuarios = document.getElementById('tabUsuarios');
+const tabDeptos = document.getElementById('tabDeptos');
 const viewBuscar = document.getElementById('viewBuscar');
 const viewHist = document.getElementById('viewHist');
 const viewPedidos = document.getElementById('viewPedidos');
 const viewUsuarios = document.getElementById('viewUsuarios');
+const viewDeptos = document.getElementById('viewDeptos');
 const filterRow = document.getElementById('filterRow');
 
 function renderUsuarios(){
@@ -1420,9 +1444,79 @@ function renderUsuarios(){
     '</div>';
 }
 
+function renderDeptos(){
+  const el = document.getElementById('deptosListado');
+  if(!el) return;
+  if(hotelAreas.length === 0){
+    el.innerHTML = '<div class="hist-empty">Aún no hay departamentos creados.</div>';
+    return;
+  }
+  el.innerHTML = hotelAreas.map((d, i) => `
+    <div class="depto-row" data-idx="${i}">
+      <span class="depto-name">${d}</span>
+      <button class="depto-edit-btn" data-idx="${i}">✎</button>
+      <button class="depto-del-btn" data-idx="${i}">🗑</button>
+    </div>`).join('');
+
+  el.querySelectorAll('.depto-edit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      const actual = hotelAreas[idx];
+      const nuevo = prompt('Editar nombre del departamento:', actual);
+      if(nuevo === null) return;
+      const limpio = nuevo.trim();
+      if(!limpio){ alert('El nombre no puede estar vacío.'); return; }
+      if(hotelAreas.some((a,i) => i !== idx && a.toLowerCase() === limpio.toLowerCase())){
+        alert('Ya existe un departamento con ese nombre.'); return;
+      }
+      const anterior = hotelAreas[idx];
+      hotelAreas[idx] = limpio;
+      const ok = await saveState();
+      if(!ok){ hotelAreas[idx] = anterior; alert('No se pudo guardar el cambio. Intenta de nuevo.'); return; }
+      updateAreaSuggestions();
+      renderDeptos();
+    });
+  });
+  el.querySelectorAll('.depto-del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      const nombre = hotelAreas[idx];
+      if(!confirm(`¿Borrar el departamento "${nombre}"? Esto no afecta movimientos ya registrados.`)) return;
+      const respaldo = hotelAreas.slice();
+      hotelAreas.splice(idx, 1);
+      const ok = await saveState();
+      if(!ok){ hotelAreas = respaldo; alert('No se pudo guardar el cambio. Intenta de nuevo.'); return; }
+      updateAreaSuggestions();
+      renderDeptos();
+    });
+  });
+}
+
+document.getElementById('createDeptoConfirm').addEventListener('click', async () => {
+  const input = document.getElementById('newDeptoName');
+  const errEl = document.getElementById('createDeptoErr');
+  errEl.style.display = 'none';
+  const nombre = input.value.trim();
+  if(!nombre){ errEl.textContent = 'Indica un nombre.'; errEl.style.display = 'block'; return; }
+  if(hotelAreas.some(a => a.toLowerCase() === nombre.toLowerCase())){
+    errEl.textContent = 'Ese departamento ya existe.'; errEl.style.display = 'block'; return;
+  }
+  hotelAreas.push(nombre);
+  const ok = await saveState();
+  if(!ok){
+    hotelAreas.pop();
+    errEl.textContent = '✗ No se pudo guardar: ' + (lastSaveError || 'revisa tu conexión') + '.';
+    errEl.style.display = 'block';
+    return;
+  }
+  input.value = '';
+  updateAreaSuggestions();
+  renderDeptos();
+});
+
 function hideAllViews(){
-  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active');
-  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none';
+  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active');
+  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none';
   filterRow.style.display='none';
 }
 tabBuscar.addEventListener('click', () => {
@@ -1460,6 +1554,15 @@ tabUsuarios.addEventListener('click', async () => {
   document.getElementById('createUserErr').style.display = 'none';
   await loadState();
   renderUsuarios();
+});
+
+tabDeptos.addEventListener('click', async () => {
+  hideAllViews();
+  tabDeptos.classList.add('active');
+  viewDeptos.style.display='block';
+  document.getElementById('createDeptoErr').style.display = 'none';
+  await loadState();
+  renderDeptos();
 });
 
 search.addEventListener('input', render);
