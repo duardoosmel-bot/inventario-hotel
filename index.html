@@ -174,6 +174,15 @@
     <button class="tabbtn" id="tabUsuarios">👥 Usuarios</button>
     <button class="tabbtn count-btn" id="btnUnlockCount">🔒 Reconteo</button>
     <button class="tabbtn sync-btn" id="btnSync">🔄 Sync</button>
+  </div>
+  <div class="controls" style="margin-top:8px;flex-wrap:wrap;">
+    <span style="font-size:13px;color:var(--muted,#777);">Reporte:</span>
+    <input type="date" id="repDesde" title="Desde">
+    <input type="date" id="repHasta" title="Hasta">
+    <button class="tabbtn" id="repUlt7">7 días</button>
+    <button class="tabbtn" id="repUlt15">15 días</button>
+    <button class="tabbtn" id="repMes">Este mes</button>
+    <button class="tabbtn" id="repTodo">Todo</button>
     <button class="tabbtn" id="btnExportReport">📊 Exportar Excel</button>
   </div>
   <div class="controls" style="margin-top:8px;">
@@ -523,17 +532,34 @@ function fotoDe(it){
   return photoOverrides[it.id] || it.img || null;
 }
 
-function generarReporteExcel(){
-  const filas = allItems().map(it => {
-    const stockInicial = it.disponibleInicial === null || it.disponibleInicial === undefined
-      ? 0 : Number(it.disponibleInicial);
+function rangoFechas(){
+  const desdeVal = document.getElementById('repDesde').value;
+  const hastaVal = document.getElementById('repHasta').value;
+  const desde = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
+  const hasta = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
+  return { desde, hasta };
+}
 
-    // solo movimientos tipo 'pedido' ya aprobados (descontados de verdad)
-    const transfers = movements.filter(m => m.itemId === it.id && m.tipo === 'pedido' && m.estado === 'aprobado');
+function generarReporteExcel(){
+  const { desde, hasta } = rangoFechas();
+
+  const filas = allItems().map(it => {
+    // solo movimientos tipo 'pedido' ya aprobados (descontados de verdad), dentro del rango
+    const transfers = movements.filter(m => {
+      if(m.itemId !== it.id || m.tipo !== 'pedido' || m.estado !== 'aprobado') return false;
+      const fecha = new Date(m.ts);
+      if(desde && fecha < desde) return false;
+      if(hasta && fecha > hasta) return false;
+      return true;
+    });
     const totalTransferido = transfers.reduce((sum, m) => sum + (Number(m.cantidad) || 0), 0);
     const destinos = [...new Set(transfers.map(m => m.destino).filter(Boolean))].join(', ');
 
     const stockFinal = disponibleDe(it);
+    const stockFinalNum = (stockFinal === null || stockFinal === undefined) ? 0 : Number(stockFinal);
+    // reconstruccion: el stock inicial del periodo = stock actual + lo transferido dentro del periodo
+    // (asume que no hubo reconteos de PIN admin dentro del rango que alteren la base)
+    const stockInicial = (desde || hasta) ? (stockFinalNum + totalTransferido) : (it.disponibleInicial ?? 0);
 
     return {
       'Código': it.codigos,
@@ -541,7 +567,7 @@ function generarReporteExcel(){
       'Categoría': it.area,
       'Stock Inicial': stockInicial,
       'Total Transferido': totalTransferido,
-      'Stock Final': (stockFinal === null || stockFinal === undefined) ? '' : stockFinal,
+      'Stock Final': stockFinal === null || stockFinal === undefined ? '' : stockFinal,
       'Transferido a': destinos || '—'
     };
   });
@@ -552,11 +578,41 @@ function generarReporteExcel(){
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Reporte inventario');
-  const fecha = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `reporte-inventario-${fecha}.xlsx`);
+
+  const desdeTxt = document.getElementById('repDesde').value || 'inicio';
+  const hastaTxt = document.getElementById('repHasta').value || new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `reporte-inventario-${desdeTxt}_a_${hastaTxt}.xlsx`);
 }
 
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+
 document.getElementById('btnExportReport').addEventListener('click', generarReporteExcel);
+
+document.getElementById('repUlt7').addEventListener('click', () => {
+  const hoy = new Date();
+  const hace7 = new Date(); hace7.setDate(hoy.getDate() - 7);
+  document.getElementById('repDesde').value = fmtDate(hace7);
+  document.getElementById('repHasta').value = fmtDate(hoy);
+});
+
+document.getElementById('repUlt15').addEventListener('click', () => {
+  const hoy = new Date();
+  const hace15 = new Date(); hace15.setDate(hoy.getDate() - 15);
+  document.getElementById('repDesde').value = fmtDate(hace15);
+  document.getElementById('repHasta').value = fmtDate(hoy);
+});
+
+document.getElementById('repMes').addEventListener('click', () => {
+  const hoy = new Date();
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  document.getElementById('repDesde').value = fmtDate(inicioMes);
+  document.getElementById('repHasta').value = fmtDate(hoy);
+});
+
+document.getElementById('repTodo').addEventListener('click', () => {
+  document.getElementById('repDesde').value = '';
+  document.getElementById('repHasta').value = '';
+});
 
 function allItems(){
   return DATA.concat(extraItems);
