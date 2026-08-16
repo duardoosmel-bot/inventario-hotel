@@ -160,6 +160,7 @@
     #search{order:-1;}
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
@@ -173,6 +174,7 @@
     <button class="tabbtn" id="tabUsuarios">👥 Usuarios</button>
     <button class="tabbtn count-btn" id="btnUnlockCount">🔒 Reconteo</button>
     <button class="tabbtn sync-btn" id="btnSync">🔄 Sync</button>
+    <button class="tabbtn" id="btnExportReport">📊 Exportar Excel</button>
   </div>
   <div class="controls" style="margin-top:8px;">
     <button class="tabbtn user-btn" id="btnUser">👤 Identificarse</button>
@@ -520,6 +522,41 @@ async function saveStateVerified(){
 function fotoDe(it){
   return photoOverrides[it.id] || it.img || null;
 }
+
+function generarReporteExcel(){
+  const filas = allItems().map(it => {
+    const stockInicial = it.disponibleInicial === null || it.disponibleInicial === undefined
+      ? 0 : Number(it.disponibleInicial);
+
+    // solo movimientos tipo 'pedido' ya aprobados (descontados de verdad)
+    const transfers = movements.filter(m => m.itemId === it.id && m.tipo === 'pedido' && m.estado === 'aprobado');
+    const totalTransferido = transfers.reduce((sum, m) => sum + (Number(m.cantidad) || 0), 0);
+    const destinos = [...new Set(transfers.map(m => m.destino).filter(Boolean))].join(', ');
+
+    const stockFinal = disponibleDe(it);
+
+    return {
+      'Código': it.codigos,
+      'Producto': it.producto || '(sin nombre)',
+      'Categoría': it.area,
+      'Stock Inicial': stockInicial,
+      'Total Transferido': totalTransferido,
+      'Stock Final': (stockFinal === null || stockFinal === undefined) ? '' : stockFinal,
+      'Transferido a': destinos || '—'
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(filas);
+  ws['!cols'] = [
+    { wch: 14 }, { wch: 40 }, { wch: 22 }, { wch: 13 }, { wch: 16 }, { wch: 12 }, { wch: 40 }
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Reporte inventario');
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `reporte-inventario-${fecha}.xlsx`);
+}
+
+document.getElementById('btnExportReport').addEventListener('click', generarReporteExcel);
 
 function allItems(){
   return DATA.concat(extraItems);
