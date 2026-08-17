@@ -206,6 +206,7 @@
       <button class="tabbtn" id="btnMoreMenu">⋯</button>
       <div class="hdr-more-menu" id="moreMenu">
         <button id="btnUnlockCount" data-perm="stockAjusteManual">🔒 <span data-i18n="btnReconteo">Reconteo</span></button>
+        <button id="btnRecalcStock" data-perm="recalcularStock">🔁 <span data-i18n="btnRecalcStock">Recalcular stock</span></button>
         <button id="btnSync">🔄 <span data-i18n="btnSync">Sync</span></button>
       </div>
     </div>
@@ -512,6 +513,10 @@ const I18N = {
     solicitandoComo: 'Solicitando como:', debeIdentificarse: '⚠ Debes identificarte (botón "Identificarse" arriba) para solicitar un movimiento.',
     procesando: 'Procesando...', errorIntenta: 'Error, intenta de nuevo', fotoActualizada: '✓ Foto actualizada',
     fotoReportadaOk: '✓ Foto reportada — gracias', fotoLista: '✓ Foto lista — cambiar', guardando: 'Guardando...',
+    btnRecalcStock: 'Recalcular stock',
+    confirmRecalculo: 'Esto recalculará el stock disponible de TODOS los artículos a partir del historial de movimientos (stock inicial + entradas − salidas ± ajustes) y sobrescribirá el saldo actual. ¿Continuar?',
+    recalculando: 'Recalculando...', recalculoOk: '✓ Recálculo completado: {n} artículo(s) actualizado(s).',
+    errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
   },
   en: {
     appTitle: 'Hotel Inventory', appMeta: '1871 items · 34 areas',
@@ -568,6 +573,10 @@ const I18N = {
     solicitandoComo: 'Requesting as:', debeIdentificarse: '⚠ You must sign in (the "Sign in" button above) to request a movement.',
     procesando: 'Processing...', errorIntenta: 'Error, try again', fotoActualizada: '✓ Photo updated',
     fotoReportadaOk: '✓ Photo reported — thanks', fotoLista: '✓ Photo ready — change', guardando: 'Saving...',
+    btnRecalcStock: 'Recalculate stock',
+    confirmRecalculo: 'This will recalculate the available stock of ALL items from the movement history (initial stock + inflows − outflows ± adjustments) and overwrite the current balance. Continue?',
+    recalculando: 'Recalculating...', recalculoOk: '✓ Recalculation complete: {n} item(s) updated.',
+    errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
   },
   sw: {
     appTitle: 'Bohari ya Hoteli', appMeta: 'bidhaa 1871 · maeneo 34',
@@ -624,6 +633,10 @@ const I18N = {
     solicitandoComo: 'Unaomba kama:', debeIdentificarse: '⚠ Lazima ujitambulishe (kitufe "Ingia" hapo juu) kuomba mwendo.',
     procesando: 'Inachakata...', errorIntenta: 'Hitilafu, jaribu tena', fotoActualizada: '✓ Picha imesasishwa',
     fotoReportadaOk: '✓ Picha imeripotiwa — asante', fotoLista: '✓ Picha tayari — badilisha', guardando: 'Inahifadhi...',
+    btnRecalcStock: 'Hesabu upya hisa',
+    confirmRecalculo: 'Hii itahesabu upya hisa inayopatikana ya bidhaa ZOTE kutoka historia ya mienendo (hisa ya awali + kuingia − kutoka ± marekebisho) na kubadilisha salio la sasa. Endelea?',
+    recalculando: 'Inahesabu upya...', recalculoOk: '✓ Uhesabuji umekamilika: bidhaa {n} zimesasishwa.',
+    errorGuardarRecalculo: '✗ Imeshindwa kuhifadhi uhesabuji upya:', sinPermisoRecalculo: 'Wadhifa wako hauwezi kuhesabu upya hisa.',
   }
 };
 let currentLang = localStorage.getItem('appLang') || 'es';
@@ -2005,17 +2018,17 @@ const PERMS = {
   MASTER: {
     userCRUD: true, deptCRUD: true, productCRUD: true, stockAjusteManual: true,
     pedidosAprobar: true, verHistorialCompleto: true, exportar: true,
-    editarStockInicial: true, verSoloPropioDepto: false
+    editarStockInicial: true, verSoloPropioDepto: false, recalcularStock: true
   },
   DEPARTAMENTO: {
     userCRUD: false, deptCRUD: false, productCRUD: false, stockAjusteManual: false,
     pedidosAprobar: false, verHistorialCompleto: false, exportar: false,
-    editarStockInicial: false, verSoloPropioDepto: true
+    editarStockInicial: false, verSoloPropioDepto: true, recalcularStock: false
   },
   ALMACENISTA: {
     userCRUD: false, deptCRUD: false, productCRUD: true, stockAjusteManual: false,
     pedidosAprobar: true, verHistorialCompleto: true, exportar: true,
-    editarStockInicial: false, verSoloPropioDepto: false
+    editarStockInicial: false, verSoloPropioDepto: false, recalcularStock: true
   }
 };
 
@@ -2051,6 +2064,41 @@ function intentarEditarStockInicial(it, nuevoValor){
   it.stockAlmacen3 = nuevoValor;
   return true;
 }
+
+// ===== Recalcular stock (ALMACENISTA / MASTER) =====
+// Recalcula stock_actual de TODOS los artículos aplicando la fórmula
+// stock_inicial + entradas - salidas ± ajustes (stockActualDe) y sobrescribe
+// el saldo vivo (stockState) con ese resultado. No toca stock_inicial.
+const btnRecalcStock = document.getElementById('btnRecalcStock');
+btnRecalcStock.addEventListener('click', async () => {
+  if(!can('recalcularStock')){ alert(t('sinPermisoRecalculo')); return; }
+  if(!confirm(t('confirmRecalculo'))) return;
+  btnRecalcStock.disabled = true;
+  const original = btnRecalcStock.innerHTML;
+  btnRecalcStock.innerHTML = '🔁 ' + t('recalculando');
+  try {
+    await loadState();
+    let cambios = 0;
+    allItems().forEach(it => {
+      const nuevo = stockActualDe(it);
+      const actual = disponibleDe(it);
+      if(nuevo !== actual){
+        stockState[it.id] = nuevo;
+        cambios++;
+      }
+    });
+    const ok = await saveState();
+    if(!ok){
+      alert(t('errorGuardarRecalculo') + ' ' + (lastSaveError || ''));
+    } else {
+      render();
+      alert(t('recalculoOk').replace('{n}', cambios));
+    }
+  } finally {
+    btnRecalcStock.disabled = false;
+    btnRecalcStock.innerHTML = original;
+  }
+});
 
 // ===== Visibilidad de UI según rol =====
 function aplicarVisibilidadRBAC(){
