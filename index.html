@@ -206,7 +206,6 @@
     <div class="hdr-more-wrap">
       <button class="tabbtn" id="btnMoreMenu">⋯</button>
       <div class="hdr-more-menu" id="moreMenu">
-        <button id="btnUnlockCount" data-perm="stockAjusteManual">🔒 <span data-i18n="btnReconteo">Reconteo</span></button>
         <button id="btnSync">🔄 <span data-i18n="btnSync">Sync</span></button>
       </div>
     </div>
@@ -495,7 +494,7 @@ const I18N = {
     hintPedidoPendiente: 'La solicitud quedará <b>pendiente</b> hasta que un administrador la apruebe con el PIN maestro.',
     lblTuNombreRegistro: 'Tu nombre (para el registro)', phMiriana: 'ej. Miriana',
     lblCantidadContada: 'Cantidad real contada (reemplaza el disponible actual)', phCantidad42: 'ej. 42',
-    hintConteoBloqueado: '🔒 Modo conteo bloqueado — actívalo con el botón "Reconteo" arriba.',
+    hintConteoBloqueado: '🔒 Modo conteo bloqueado — actívalo con el botón "🔁 Recalcular stock" arriba.',
     btnRegistrarMovimiento: 'Registrar movimiento', registrarConteo: 'Registrar conteo', solicitarMovimiento: 'Solicitar movimiento',
     pinModalTitulo: 'Activar modo conteo', pinModalTexto: 'Introduce el PIN de administrador. Quedará activo para todos los artículos hasta que lo bloquees o cierres la página.',
     lblPin: 'PIN', btnActivar: 'Activar',
@@ -555,7 +554,7 @@ const I18N = {
     hintPedidoPendiente: 'The request will remain <b>pending</b> until an administrator approves it with the master PIN.',
     lblTuNombreRegistro: 'Your name (for the record)', phMiriana: 'e.g. Miriana',
     lblCantidadContada: 'Actual counted quantity (replaces current available)', phCantidad42: 'e.g. 42',
-    hintConteoBloqueado: '🔒 Count mode locked — activate it with the "Recount" button above.',
+    hintConteoBloqueado: '🔒 Count mode locked — activate it with the "🔁 Recalculate stock" button above.',
     btnRegistrarMovimiento: 'Record movement', registrarConteo: 'Record count', solicitarMovimiento: 'Request movement',
     pinModalTitulo: 'Activate count mode', pinModalTexto: 'Enter the administrator PIN. It will stay active for all items until you lock it or close the page.',
     lblPin: 'PIN', btnActivar: 'Activate',
@@ -615,7 +614,7 @@ const I18N = {
     hintPedidoPendiente: 'Ombi litabaki <b>likisubiri</b> hadi msimamizi alithibitishe kwa PIN kuu.',
     lblTuNombreRegistro: 'Jina lako (kwa rekodi)', phMiriana: 'mf. Miriana',
     lblCantidadContada: 'Kiasi halisi kilichohesabiwa (kinabadilisha kinachopatikana sasa)', phCantidad42: 'mf. 42',
-    hintConteoBloqueado: '🔒 Hali ya hesabu imefungwa — iwashe kwa kitufe "Hesabu upya" hapo juu.',
+    hintConteoBloqueado: '🔒 Hali ya hesabu imefungwa — iwashe kwa kitufe "🔁 Hesabu upya hisa" hapo juu.',
     btnRegistrarMovimiento: 'Sajili mwendo', registrarConteo: 'Sajili hesabu', solicitarMovimiento: 'Omba mwendo',
     pinModalTitulo: 'Washa hali ya hesabu', pinModalTexto: 'Ingiza PIN ya msimamizi. Itabaki hai kwa bidhaa zote hadi uifunge au ufunge ukurasa.',
     lblPin: 'PIN', btnActivar: 'Washa',
@@ -973,7 +972,7 @@ function openModal(id){
   refreshUserUI();
   atMov.disabled = sinDato;
   atMov.classList.toggle('disabled', sinDato);
-  const puedeContar = can('stockAjusteManual');
+  const puedeContar = conteoUnlocked;
   atCount.disabled = !puedeContar;
   atCount.classList.toggle('disabled', !puedeContar);
   setMode(sinDato ? 'count' : 'mov');
@@ -1093,16 +1092,12 @@ mConfirm.addEventListener('click', async () => {
       departamentoId: currentUser.departamentoId || null
     });
   } else {
-    if(!can('stockAjusteManual')){
-      mErr.textContent = 'Tu rol no puede hacer ajustes manuales de stock (conteo físico).';
-      mErr.style.display='block'; return;
-    }
     const conteo = parseFloat(mConteo.value);
     if(mConteo.value === '' || isNaN(conteo) || conteo < 0){
       mErr.textContent = 'Indica una cantidad contada válida (0 o más).'; mErr.style.display='block'; return;
     }
     if(!conteoUnlocked){
-      mErr.textContent = 'El modo conteo no está activado. Toca "🔒 Reconteo" arriba e ingresa el PIN.'; mErr.style.display='block'; return;
+      mErr.textContent = 'El modo conteo no está activado. Toca "🔁 Recalcular stock" arriba e ingresa el PIN.'; mErr.style.display='block'; return;
     }
     const diferencia = conteo - disp;
     stockState[it.id] = conteo;
@@ -1142,7 +1137,7 @@ mConfirm.addEventListener('click', async () => {
 });
 
 // ---- Desbloqueo del modo conteo (PIN unico por sesion) ----
-const btnUnlockCount = document.getElementById('btnUnlockCount');
+const btnUnlockCount = document.getElementById('btnRecalcStock');
 const overlayPin = document.getElementById('overlayPin');
 const pinInput = document.getElementById('pinInput');
 const pinErr = document.getElementById('pinErr');
@@ -1151,17 +1146,18 @@ let pinPurpose = 'reconteo'; // 'reconteo' | 'pedidos'
 
 function refreshUnlockButton(){
   if(conteoUnlocked){
-    btnUnlockCount.textContent = t('reconteoActivo');
+    btnUnlockCount.innerHTML = '🔁 ' + t('reconteoActivo');
     btnUnlockCount.classList.add('unlocked');
     reconteoHint.style.display = 'block';
   } else {
-    btnUnlockCount.textContent = '🔒 ' + t('btnReconteo');
+    btnUnlockCount.innerHTML = '🔁 <span data-i18n="btnRecalcStock">' + t('btnRecalcStock') + '</span>';
     btnUnlockCount.classList.remove('unlocked');
     reconteoHint.style.display = 'none';
   }
 }
 
 btnUnlockCount.addEventListener('click', () => {
+  if(!can('recalcularStock')){ alert(t('sinPermisoRecalculo')); return; }
   if(conteoUnlocked){
     conteoUnlocked = false;
     refreshUnlockButton();
@@ -2066,39 +2062,10 @@ function intentarEditarStockInicial(it, nuevoValor){
 }
 
 // ===== Recalcular stock (ALMACENISTA / MASTER) =====
-// Recalcula stock_actual de TODOS los artículos aplicando la fórmula
-// stock_inicial + entradas - salidas ± ajustes (stockActualDe) y sobrescribe
-// el saldo vivo (stockState) con ese resultado. No toca stock_inicial.
-const btnRecalcStock = document.getElementById('btnRecalcStock');
-btnRecalcStock.addEventListener('click', async () => {
-  if(!can('recalcularStock')){ alert(t('sinPermisoRecalculo')); return; }
-  if(!confirm(t('confirmRecalculo'))) return;
-  btnRecalcStock.disabled = true;
-  const original = btnRecalcStock.innerHTML;
-  btnRecalcStock.innerHTML = '🔁 ' + t('recalculando');
-  try {
-    await loadState();
-    let cambios = 0;
-    allItems().forEach(it => {
-      const nuevo = stockActualDe(it);
-      const actual = disponibleDe(it);
-      if(nuevo !== actual){
-        stockState[it.id] = nuevo;
-        cambios++;
-      }
-    });
-    const ok = await saveState();
-    if(!ok){
-      alert(t('errorGuardarRecalculo') + ' ' + (lastSaveError || ''));
-    } else {
-      render();
-      alert(t('recalculoOk').replace('{n}', cambios));
-    }
-  } finally {
-    btnRecalcStock.disabled = false;
-    btnRecalcStock.innerHTML = original;
-  }
-});
+// "🔁 Recalcular stock" pide el PIN de administrador y, una vez correcto, activa el
+// modo de conteo físico (mismo mecanismo que antes tenía "Reconteo"), para que el
+// almacenista pueda recontar artículo por artículo y actualizar el disponible.
+// La lógica de desbloqueo está más abajo, en btnUnlockCount (reutiliza este botón).
 
 // ===== Visibilidad de UI según rol =====
 function aplicarVisibilidadRBAC(){
