@@ -121,6 +121,29 @@
   .pin-note{font-size:10.5px;color:var(--muted);margin-top:4px;}
   .who-badge.pin{background:#e8d9c0;color:#8a5a00;}
 
+  /* ===== Cabecera compacta ===== */
+  header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
+  .hdr-top{display:flex;align-items:center;gap:8px;}
+  h1{font-size:15px;margin:0;white-space:nowrap;flex-shrink:0;}
+  .hdr-meta{font-size:10.5px;color:var(--muted);font-family:Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+  .lang-select{font-family:Arial,sans-serif;font-size:11px;padding:5px 6px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);flex-shrink:0;}
+  .hdr-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;}
+  .hdr-tabs::-webkit-scrollbar{display:none;}
+  .hdr-tabs .tabbtn{padding:7px 10px;font-size:12px;white-space:nowrap;flex-shrink:0;min-height:34px;}
+  .hdr-more-wrap{position:relative;flex-shrink:0;}
+  .hdr-more-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(43,36,29,.18);z-index:60;min-width:170px;overflow:hidden;}
+  .hdr-more-menu.show{display:block;}
+  .hdr-more-menu button{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:#fff;font-family:Arial,sans-serif;font-size:12.5px;cursor:pointer;color:var(--ink);border-bottom:1px solid var(--line);min-height:40px;touch-action:manipulation;}
+  .hdr-more-menu button:last-child{border-bottom:none;}
+  .hdr-more-menu button:active{background:var(--accent-soft);}
+  .hdr-row2{display:flex;align-items:center;gap:6px;margin-top:6px;}
+  .hdr-row2 .user-btn{flex-shrink:0;}
+  .hdr-toggle-filters{font-family:Arial,sans-serif;font-size:11px;padding:6px 10px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;flex-shrink:0;min-height:34px;touch-action:manipulation;}
+  #filterRow{display:none;margin-top:6px;}
+  #filterRow.show{display:flex;}
+  .sync-status:empty, .reconteo-hint:empty{display:none;}
+  .sync-status{margin:4px 0 0;font-size:10px;}
+
   .form-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 20px;max-width:440px;}
   .form-card h2{font-family:Georgia,serif;font-size:17px;margin:0 0 4px;}
   .form-card .hint{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.4;}
@@ -150,7 +173,6 @@
   .modal input[type=text].wide, .modal input[type=number].wide{margin-bottom:8px;}
 
   @media (max-width: 480px){
-    h1{font-size:19px;}
     .grid{grid-template-columns:repeat(2,1fr);gap:10px;padding:12px 10px calc(90px + env(safe-area-inset-bottom));}
     .prod{font-size:12.5px;}
     .specs{font-size:10.5px;}
@@ -159,55 +181,68 @@
     .add-item-btn{right:14px;padding:13px 18px;font-size:12.5px;}
     .controls{gap:8px;}
     #search{order:-1;}
+    .hdr-meta{display:none;}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>Inventario Hotel</h1>
-  <p class="subtitle">1871 items · 34 áreas · toca un item para registrar un movimiento</p>
-  <p class="shared-note">🔗 Movimientos compartidos — visibles para todos los que usen este artefacto</p>
-  <div class="controls">
-    <button class="tabbtn active" id="tabBuscar">Buscador</button>
-    <button class="tabbtn" id="tabHist">Historial <span id="histCountBadge"></span></button>
-    <button class="tabbtn pedidos-btn" id="tabPedidos">📋 Pedidos <span id="pedidosCountBadge"></span></button>
-    <button class="tabbtn" id="tabUsuarios" data-perm="userCRUD">👥 Usuarios</button>
-    <button class="tabbtn" id="tabDeptos" data-perm="deptCRUD">🏢 Deptos</button>
-    <button class="tabbtn count-btn" id="btnUnlockCount" data-perm="stockAjusteManual">🔒 Reconteo</button>
-    <button class="tabbtn sync-btn" id="btnSync">🔄 Sync</button>
+  <div class="hdr-top">
+    <h1 data-i18n="appTitle">Inventario Hotel</h1>
+    <span class="hdr-meta" data-i18n="appMeta">1871 items · 34 áreas</span>
+    <select class="lang-select" id="langSelect">
+      <option value="es">🇪🇸 ES</option>
+      <option value="en">🇬🇧 EN</option>
+      <option value="sw">🇹🇿 SW</option>
+    </select>
   </div>
-  <div class="controls" style="margin-top:8px;">
-    <button class="tabbtn user-btn" id="btnUser">👤 Identificarse</button>
+  <div class="hdr-tabs">
+    <button class="tabbtn active" id="tabBuscar" data-i18n="tabBuscar">Buscador</button>
+    <button class="tabbtn" id="tabHist" data-i18n="tabHist">Historial <span id="histCountBadge"></span></button>
+    <button class="tabbtn pedidos-btn" id="tabPedidos">📋 <span data-i18n="tabPedidos">Pedidos</span> <span id="pedidosCountBadge"></span></button>
+    <button class="tabbtn" id="tabUsuarios" data-perm="userCRUD">👥 <span data-i18n="tabUsuarios">Usuarios</span></button>
+    <button class="tabbtn" id="tabDeptos" data-perm="deptCRUD">🏢 <span data-i18n="tabDeptos">Deptos</span></button>
+    <div class="hdr-more-wrap">
+      <button class="tabbtn" id="btnMoreMenu">⋯</button>
+      <div class="hdr-more-menu" id="moreMenu">
+        <button id="btnUnlockCount" data-perm="stockAjusteManual">🔒 <span data-i18n="btnReconteo">Reconteo</span></button>
+        <button id="btnSync">🔄 <span data-i18n="btnSync">Sync</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="hdr-row2">
+    <button class="tabbtn user-btn" id="btnUser" data-i18n="btnIdentify">👤 Identificarse</button>
+    <button class="hdr-toggle-filters" id="btnToggleFilters" data-i18n="btnFilters">Filtros ▾</button>
   </div>
   <p class="sync-status" id="syncStatus"></p>
-  <p class="reconteo-hint" id="reconteoHint" style="display:none;">🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.</p>
-  <div class="controls" id="filterRow" style="margin-top:10px;">
-    <input type="text" id="search" placeholder="Buscar por código, nombre o categoría...">
-    <select id="areaFilter" title="Filtrar por categoría"><option value="">Todas las categorías</option><option value="Additional items">Additional items</option><option value="Bar utensil Beach">Bar utensil Beach</option><option value="asiatic">asiatic</option><option value="bamboo">bamboo</option><option value="bar utensil garden">bar utensil garden</option><option value="bar utensil main">bar utensil main</option><option value="bar utensil room service">bar utensil room service</option><option value="baskets">baskets</option><option value="beach restaurant">beach restaurant</option><option value="buffet beach restaurant">buffet beach restaurant</option><option value="buffet rm">buffet rm</option><option value="dinner party">dinner party</option><option value="flatware">flatware</option><option value="guest rooms">guest rooms</option><option value="hamburguesas for main restaurant">hamburguesas for main restaurant</option><option value="holloware">holloware</option><option value="kitchen utensils asiatic">kitchen utensils asiatic</option><option value="kitchen utensils beach">kitchen utensils beach</option><option value="kitchen utensils rc">kitchen utensils rc</option><option value="kitchen utensils rm">kitchen utensils rm</option><option value="main pool">main pool</option><option value="main restaurant and rooms">main restaurant and rooms</option><option value="pastry">pastry</option><option value="pastry utensil">pastry utensil</option><option value="public areas">public areas</option><option value="restaurant beach carnivorous rm">restaurant beach carnivorous rm</option><option value="restaurants">restaurants</option><option value="restaurants and room">restaurants and room</option><option value="signage">signage</option><option value="staff canteen">staff canteen</option><option value="staff canteen buffet">staff canteen buffet</option><option value="staff canteen kitchen utensils">staff canteen kitchen utensils</option><option value="stewarding">stewarding</option><option value="trolley">trolley</option></select>
-    <label class="chk"><input type="checkbox" id="onlyFusion"> Solo fusionados</label>
-    <label class="chk"><input type="checkbox" id="onlyMoved"> Con movimientos</label>
-    <label class="chk"><input type="checkbox" id="onlyInferred"> Nombre a revisar</label>
-    <label class="chk"><input type="checkbox" id="onlySinDato"> Sin dato de stock</label>
+  <p class="reconteo-hint" id="reconteoHint" style="display:none;" data-i18n="reconteoHint">🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.</p>
+  <div class="controls" id="filterRow">
+    <input type="text" id="search" data-i18n-ph="searchPh" placeholder="Buscar por código, nombre o categoría...">
+    <select id="areaFilter" title="Filtrar por categoría"><option value="" data-i18n="allCategories">Todas las categorías</option><option value="Additional items">Additional items</option><option value="Bar utensil Beach">Bar utensil Beach</option><option value="asiatic">asiatic</option><option value="bamboo">bamboo</option><option value="bar utensil garden">bar utensil garden</option><option value="bar utensil main">bar utensil main</option><option value="bar utensil room service">bar utensil room service</option><option value="baskets">baskets</option><option value="beach restaurant">beach restaurant</option><option value="buffet beach restaurant">buffet beach restaurant</option><option value="buffet rm">buffet rm</option><option value="dinner party">dinner party</option><option value="flatware">flatware</option><option value="guest rooms">guest rooms</option><option value="hamburguesas for main restaurant">hamburguesas for main restaurant</option><option value="holloware">holloware</option><option value="kitchen utensils asiatic">kitchen utensils asiatic</option><option value="kitchen utensils beach">kitchen utensils beach</option><option value="kitchen utensils rc">kitchen utensils rc</option><option value="kitchen utensils rm">kitchen utensils rm</option><option value="main pool">main pool</option><option value="main restaurant and rooms">main restaurant and rooms</option><option value="pastry">pastry</option><option value="pastry utensil">pastry utensil</option><option value="public areas">public areas</option><option value="restaurant beach carnivorous rm">restaurant beach carnivorous rm</option><option value="restaurants">restaurants</option><option value="restaurants and room">restaurants and room</option><option value="signage">signage</option><option value="staff canteen">staff canteen</option><option value="staff canteen buffet">staff canteen buffet</option><option value="staff canteen kitchen utensils">staff canteen kitchen utensils</option><option value="stewarding">stewarding</option><option value="trolley">trolley</option></select>
+    <label class="chk"><input type="checkbox" id="onlyFusion"> <span data-i18n="onlyFusion">Solo fusionados</span></label>
+    <label class="chk"><input type="checkbox" id="onlyMoved"> <span data-i18n="onlyMoved">Con movimientos</span></label>
+    <label class="chk"><input type="checkbox" id="onlyInferred"> <span data-i18n="onlyInferred">Nombre a revisar</span></label>
+    <label class="chk"><input type="checkbox" id="onlySinDato"> <span data-i18n="onlySinDato">Sin dato de stock</span></label>
   </div>
 </header>
 
 <div class="overlay" id="overlayUser">
   <div class="modal">
-    <h2>Identificarse</h2>
+    <h2 data-i18n="identificarse">Identificarse</h2>
     <div id="userLoggedView" style="display:none;">
-      <p class="m-specs">Sesión activa como <b id="userLoggedName"></b>.</p>
-      <div class="actions"><button class="btn btn-secondary" id="btnLogout">Cerrar sesión</button></div>
+      <p class="m-specs"><span data-i18n="sesionActiva">Sesión activa como</span> <b id="userLoggedName"></b>.</p>
+      <div class="actions"><button class="btn btn-secondary" id="btnLogout" data-i18n="cerrarSesion">Cerrar sesión</button></div>
     </div>
     <div id="userLoginView">
-      <label>Tu PIN personal</label>
+      <label data-i18n="tuPin">Tu PIN personal</label>
       <input type="password" id="loginPinInput" inputmode="numeric" maxlength="6" placeholder="****">
       <div class="err" id="loginErr"></div>
       <div class="actions">
-        <button class="btn btn-secondary" id="userCancel">Cancelar</button>
-        <button class="btn btn-primary" id="loginConfirm">Entrar</button>
+        <button class="btn btn-secondary" id="userCancel" data-i18n="cancelar">Cancelar</button>
+        <button class="btn btn-primary" id="loginConfirm" data-i18n="entrar">Entrar</button>
       </div>
       <hr style="margin:16px 0;border:none;border-top:1px solid var(--line);">
-      <p class="m-specs">¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.</p>
+      <p class="m-specs" data-i18n="nuevoEmpleado">¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.</p>
     </div>
   </div>
 </div>
@@ -420,6 +455,92 @@ const DATA = [{"id": "it_80374f05006700", "area": "guest rooms", "codigos": "RC0
   };
 })();
 
+// ===================== Idioma (ES / EN / SW) =====================
+const I18N = {
+  es: {
+    appTitle: 'Inventario Hotel', appMeta: '1871 items · 34 áreas',
+    tabBuscar: 'Buscador', tabHist: 'Historial', tabPedidos: 'Pedidos', tabUsuarios: 'Usuarios', tabDeptos: 'Deptos',
+    btnReconteo: 'Reconteo', btnSync: 'Sync', btnIdentify: '👤 Identificarse', btnFilters: 'Filtros ▾',
+    reconteoHint: '🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.',
+    searchPh: 'Buscar por código, nombre o categoría...', allCategories: 'Todas las categorías',
+    onlyFusion: 'Solo fusionados', onlyMoved: 'Con movimientos', onlyInferred: 'Nombre a revisar', onlySinDato: 'Sin dato de stock',
+    sinFoto: 'sin foto', reqLabel: 'Req:', dispLabel: 'Disponible:', sinDatoTxt: 'Sin dato — usar Conteo físico',
+    fusionBadge: '⚠ códigos fusionados', inferBadge: '✎ nombre recuperado — revisar', sinResultados: 'Sin resultados.',
+    resultado: 'resultado', resultados: 'resultados',
+    pendiente: '⏳ Pendiente', aprobado: '✓ Aprobado', rechazado: '✗ Rechazado',
+    aprobar: '✓ Aprobar', rechazar: '✗ Rechazar', noPedidosPendientes: 'No hay pedidos pendientes.',
+    noPedidosPropios: 'Tu departamento aún no tiene pedidos.', noMovimientos: 'Aún no hay movimientos registrados.',
+    noUsuarios: 'Aún no hay usuarios creados.', noDeptos: 'Aún no hay departamentos creados.',
+    thFecha: 'Fecha', thQuien: 'Quién', thProducto: 'Producto', thCodigo: 'Código', thOrigen: 'Origen', thDestino: 'Destino', thCant: 'Cant.', thDisp: 'Disp. resultante',
+    deshacer: 'deshacer', pedidoN: 'Pedido #', solicita: 'Solicita:', desde: 'Desde:', cantidad: 'Cantidad:',
+    identificarse: 'Identificarse', sesionActiva: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
+    tuPin: 'Tu PIN personal', cancelar: 'Cancelar', entrar: 'Entrar', nuevoEmpleado: '¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.',
+  },
+  en: {
+    appTitle: 'Hotel Inventory', appMeta: '1871 items · 34 areas',
+    tabBuscar: 'Search', tabHist: 'History', tabPedidos: 'Orders', tabUsuarios: 'Users', tabDeptos: 'Depts',
+    btnReconteo: 'Recount', btnSync: 'Sync', btnIdentify: '👤 Sign in', btnFilters: 'Filters ▾',
+    reconteoHint: '🔓 Recount mode active — filter by code, name or category below to find each item.',
+    searchPh: 'Search by code, name or category...', allCategories: 'All categories',
+    onlyFusion: 'Merged only', onlyMoved: 'With movements', onlyInferred: 'Name to review', onlySinDato: 'No stock data',
+    sinFoto: 'no photo', reqLabel: 'Req:', dispLabel: 'Available:', sinDatoTxt: 'No data — use Physical count',
+    fusionBadge: '⚠ merged codes', inferBadge: '✎ recovered name — review', sinResultados: 'No results.',
+    resultado: 'result', resultados: 'results',
+    pendiente: '⏳ Pending', aprobado: '✓ Approved', rechazado: '✗ Rejected',
+    aprobar: '✓ Approve', rechazar: '✗ Reject', noPedidosPendientes: 'No pending orders.',
+    noPedidosPropios: 'Your department has no orders yet.', noMovimientos: 'No movements recorded yet.',
+    noUsuarios: 'No users created yet.', noDeptos: 'No departments created yet.',
+    thFecha: 'Date', thQuien: 'Who', thProducto: 'Product', thCodigo: 'Code', thOrigen: 'Origin', thDestino: 'Destination', thCant: 'Qty.', thDisp: 'Resulting avail.',
+    deshacer: 'undo', pedidoN: 'Order #', solicita: 'Requested by:', desde: 'From:', cantidad: 'Quantity:',
+    identificarse: 'Sign in', sesionActiva: 'Signed in as', cerrarSesion: 'Sign out',
+    tuPin: 'Your personal PIN', cancelar: 'Cancel', entrar: 'Sign in', nuevoEmpleado: 'New employee? Go to the "👥 Users" tab above to create one.',
+  },
+  sw: {
+    appTitle: 'Bohari ya Hoteli', appMeta: 'bidhaa 1871 · maeneo 34',
+    tabBuscar: 'Tafuta', tabHist: 'Historia', tabPedidos: 'Maombi', tabUsuarios: 'Watumiaji', tabDeptos: 'Idara',
+    btnReconteo: 'Hesabu upya', btnSync: 'Sync', btnIdentify: '👤 Ingia', btnFilters: 'Vichujio ▾',
+    reconteoHint: '🔓 Hali ya hesabu upya imewashwa — chuja kwa msimbo, jina au kategoria hapa chini kupata kila bidhaa.',
+    searchPh: 'Tafuta kwa msimbo, jina au kategoria...', allCategories: 'Kategoria zote',
+    onlyFusion: 'Zilizounganishwa tu', onlyMoved: 'Zenye mienendo', onlyInferred: 'Jina la kukagua', onlySinDato: 'Bila data ya hisa',
+    sinFoto: 'hakuna picha', reqLabel: 'Haja:', dispLabel: 'Inapatikana:', sinDatoTxt: 'Hakuna data — tumia Hesabu halisi',
+    fusionBadge: '⚠ misimbo iliyounganishwa', inferBadge: '✎ jina lililopatikana — kagua', sinResultados: 'Hakuna matokeo.',
+    resultado: 'matokeo', resultados: 'matokeo',
+    pendiente: '⏳ Inasubiri', aprobado: '✓ Imeidhinishwa', rechazado: '✗ Imekataliwa',
+    aprobar: '✓ Idhinisha', rechazar: '✗ Kataa', noPedidosPendientes: 'Hakuna maombi yanayosubiri.',
+    noPedidosPropios: 'Idara yako bado haina maombi.', noMovimientos: 'Bado hakuna mienendo iliyosajiliwa.',
+    noUsuarios: 'Bado hakuna watumiaji walioundwa.', noDeptos: 'Bado hakuna idara zilizoundwa.',
+    thFecha: 'Tarehe', thQuien: 'Nani', thProducto: 'Bidhaa', thCodigo: 'Msimbo', thOrigen: 'Asili', thDestino: 'Marudio', thCant: 'Kiasi', thDisp: 'Inapatikana baadaye',
+    deshacer: 'tengua', pedidoN: 'Ombi #', solicita: 'Anaomba:', desde: 'Kutoka:', cantidad: 'Kiasi:',
+    identificarse: 'Ingia', sesionActiva: 'Umeingia kama', cerrarSesion: 'Toka',
+    tuPin: 'PIN yako binafsi', cancelar: 'Ghairi', entrar: 'Ingia', nuevoEmpleado: 'Mfanyakazi mpya? Nenda kwenye kichupo "👥 Watumiaji" juu kuunda mmoja.',
+  }
+};
+let currentLang = localStorage.getItem('appLang') || 'es';
+function t(key){
+  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.es[key]) || key;
+}
+function applyLang(lang){
+  currentLang = I18N[lang] ? lang : 'es';
+  localStorage.setItem('appLang', currentLang);
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    // conservar iconos/emojis que preceden al texto en botones simples
+    if(el.children.length === 0) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-ph'));
+  });
+  const langSelect = document.getElementById('langSelect');
+  if(langSelect) langSelect.value = currentLang;
+  if(typeof render === 'function') render();
+  if(typeof renderHist === 'function' && document.getElementById('viewHist').style.display !== 'none') renderHist();
+  if(typeof renderPedidos === 'function' && document.getElementById('viewPedidos').style.display !== 'none') renderPedidos();
+  if(typeof renderUsuarios === 'function') renderUsuarios();
+  if(typeof renderDeptos === 'function') renderDeptos();
+}
+
 const byId = {};
 window.addEventListener('error', (e) => {
   console.error('Error global capturado:', e.error || e.message);
@@ -611,10 +732,10 @@ function render(){
     return true;
   });
 
-  countEl.textContent = filtered.length + ' resultado' + (filtered.length===1?'':'s');
+  countEl.textContent = filtered.length + ' ' + (filtered.length===1? t('resultado') : t('resultados'));
 
   if(filtered.length === 0){
-    grid.innerHTML = '<div class="empty">Sin resultados.</div>';
+    grid.innerHTML = '<div class="empty">' + t('sinResultados') + '</div>';
     return;
   }
 
@@ -627,19 +748,19 @@ function render(){
     card.className = 'card' + (it.fusionado?' fusion':'') + (!sinDato && disp<=0?' agotado':'') + (sinDato?' sindato':'');
     card.dataset.id = it.id;
     const dispLine = sinDato
-      ? '<div class="disponible sindato-txt">Sin dato — usar Conteo físico</div>'
-      : `<div class="disponible ${disp>0?'pos':'neg'}">Disponible: ${fmtNum(disp)}</div>`;
+      ? `<div class="disponible sindato-txt">${t('sinDatoTxt')}</div>`
+      : `<div class="disponible ${disp>0?'pos':'neg'}">${t('dispLabel')} ${fmtNum(disp)}</div>`;
     card.innerHTML = `
-      <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : '<span class="noimg">sin foto</span>'}</div>
+      <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : `<span class="noimg">${t('sinFoto')}</span>`}</div>
       <div class="body">
         <span class="area-tag">${it.area}</span>
         <div class="prod">${it.producto || '(sin nombre)'}</div>
         <div class="specs">${it.specs || ''}</div>
         <div class="codes">${it.codigos}</div>
-        <div class="stocks"><span>Req: <b>${fmtNum(it.qtyReq)}</b></span></div>
+        <div class="stocks"><span>${t('reqLabel')} <b>${fmtNum(it.qtyReq)}</b></span></div>
         ${dispLine}
-        ${it.fusionado ? '<div class="fusion-badge">⚠ códigos fusionados</div>' : ''}
-        ${it.nombreInferido ? '<div class="infer-badge">✎ nombre recuperado — revisar</div>' : ''}
+        ${it.fusionado ? `<div class="fusion-badge">${t('fusionBadge')}</div>` : ''}
+        ${it.nombreInferido ? `<div class="infer-badge">${t('inferBadge')}</div>` : ''}
       </div>`;
     card.addEventListener('click', () => openModal(it.id));
     frag.appendChild(card);
@@ -1170,7 +1291,7 @@ document.getElementById('btnLogout').addEventListener('click', () => {
   aplicarVisibilidadRBAC();
   hideAllViews();
   tabBuscar.classList.add('active');
-  viewBuscar.style.display='block'; filterRow.style.display='flex';
+  viewBuscar.style.display='block';
 });
 
 const newUserRoleSel = document.getElementById('newUserRole');
@@ -1247,18 +1368,18 @@ function renderPedidos(){
     // DEPARTAMENTO: solo lectura, filtrado a su propio departamento, sin acciones
     const propios = filtrarPedidosPorRol(movements.filter(m => m.tipo === 'pedido'));
     if(propios.length === 0){
-      el.innerHTML = '<div class="hist-empty">Tu departamento aún no tiene pedidos.</div>';
+      el.innerHTML = `<div class="hist-empty">${t('noPedidosPropios')}</div>`;
       return;
     }
     el.innerHTML = propios.map(m => `
       <div class="pedido-card" data-order="${m.orderNum}">
-        <span class="pn">Pedido #${m.orderNum}</span> <span class="estado-badge ${m.estado}">${m.estado === 'pendiente' ? '⏳ Pendiente' : m.estado === 'aprobado' ? '✓ Aprobado' : '✗ Rechazado'}</span>
+        <span class="pn">${t('pedidoN')}${m.orderNum}</span> <span class="estado-badge ${m.estado}">${m.estado === 'pendiente' ? t('pendiente') : m.estado === 'aprobado' ? t('aprobado') : t('rechazado')}</span>
         <div class="pp">${m.producto}</div>
         <div class="pm">
-          Código: ${m.codigos}<br>
-          Solicita: <b>${m.quien}</b><br>
-          Desde: ${m.area} → <b>${m.destino}</b><br>
-          Cantidad: <b>${fmtNum(m.cantidad)}</b><br>
+          ${t('thCodigo')}: ${m.codigos}<br>
+          ${t('solicita')} <b>${m.quien}</b><br>
+          ${t('desde')} ${m.area} → <b>${m.destino}</b><br>
+          ${t('cantidad')} <b>${fmtNum(m.cantidad)}</b><br>
           ${new Date(m.ts).toLocaleString('es-ES')}
         </div>
       </div>
@@ -1269,23 +1390,23 @@ function renderPedidos(){
   // MASTER / ALMACENISTA: cola de aprobación
   const pendientes = pendientesGlobal;
   if(pendientes.length === 0){
-    el.innerHTML = '<div class="hist-empty">No hay pedidos pendientes.</div>';
+    el.innerHTML = `<div class="hist-empty">${t('noPedidosPendientes')}</div>`;
     return;
   }
   el.innerHTML = pendientes.map(m => `
     <div class="pedido-card" data-order="${m.orderNum}">
-      <span class="pn">Pedido #${m.orderNum}</span>
+      <span class="pn">${t('pedidoN')}${m.orderNum}</span>
       <div class="pp">${m.producto}</div>
       <div class="pm">
-        Código: ${m.codigos}<br>
-        Solicita: <b>${m.quien}</b><br>
-        Desde: ${m.area} → <b>${m.destino}</b><br>
-        Cantidad: <b>${fmtNum(m.cantidad)}</b><br>
+        ${t('thCodigo')}: ${m.codigos}<br>
+        ${t('solicita')} <b>${m.quien}</b><br>
+        ${t('desde')} ${m.area} → <b>${m.destino}</b><br>
+        ${t('cantidad')} <b>${fmtNum(m.cantidad)}</b><br>
         ${new Date(m.ts).toLocaleString('es-ES')}
       </div>
       <div class="pedido-actions">
-        <button class="btn btn-approve" data-action="aprobar" data-order="${m.orderNum}">✓ Aprobar</button>
-        <button class="btn btn-reject" data-action="rechazar" data-order="${m.orderNum}">✗ Rechazar</button>
+        <button class="btn btn-approve" data-action="aprobar" data-order="${m.orderNum}">${t('aprobar')}</button>
+        <button class="btn btn-reject" data-action="rechazar" data-order="${m.orderNum}">${t('rechazar')}</button>
       </div>
     </div>
   `).join('');
@@ -1336,12 +1457,12 @@ function renderHist(){
   const el = document.getElementById('histContent');
   document.getElementById('histCountBadge').textContent = movements.length ? `(${movements.length})` : '';
   if(movements.length === 0){
-    el.innerHTML = '<div class="hist-empty">Aún no hay movimientos registrados.</div>';
+    el.innerHTML = `<div class="hist-empty">${t('noMovimientos')}</div>`;
     return;
   }
   let rows = movements.map((m,i) => {
     const estadoBadge = m.tipo === 'pedido'
-      ? `<span class="estado-badge ${m.estado}">${m.estado === 'pendiente' ? '⏳ Pendiente' : m.estado === 'aprobado' ? '✓ Aprobado' : '✗ Rechazado'}</span>`
+      ? `<span class="estado-badge ${m.estado}">${m.estado === 'pendiente' ? t('pendiente') : m.estado === 'aprobado' ? t('aprobado') : t('rechazado')}</span>`
       : '';
     const ordenTxt = m.orderNum ? `#${m.orderNum} ` : '';
     return `
@@ -1354,11 +1475,11 @@ function renderHist(){
       <td>${ordenTxt}→ ${m.destino} ${estadoBadge}</td>
       <td>${fmtNum(m.cantidad)}</td>
       <td>${fmtNum(m.disponibleResultante)}</td>
-      <td>${m.tipo!=='pedido' ? `<button class="del-btn" data-idx="${i}">deshacer</button>` : ''}</td>
+      <td>${m.tipo!=='pedido' ? `<button class="del-btn" data-idx="${i}">${t('deshacer')}</button>` : ''}</td>
     </tr>`;
   }).join('');
   el.innerHTML = `<div class="hist-scroll"><table class="hist-table">
-    <thead><tr><th>Fecha</th><th>Quién</th><th>Producto</th><th>Código</th><th>Origen</th><th>Destino</th><th>Cant.</th><th>Disp. resultante</th><th></th></tr></thead>
+    <thead><tr><th>${t('thFecha')}</th><th>${t('thQuien')}</th><th>${t('thProducto')}</th><th>${t('thCodigo')}</th><th>${t('thOrigen')}</th><th>${t('thDestino')}</th><th>${t('thCant')}</th><th>${t('thDisp')}</th><th></th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
   el.querySelectorAll('.del-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1397,7 +1518,7 @@ function renderUsuarios(){
   const el = document.getElementById('usuariosListado');
   if(!el) return;
   if(users.length === 0){
-    el.innerHTML = '<div class="hist-empty">Aún no hay usuarios creados.</div>';
+    el.innerHTML = `<div class="hist-empty">${t('noUsuarios')}</div>`;
     return;
   }
   el.innerHTML = '<div class="users-wrap">' +
@@ -1431,7 +1552,7 @@ function renderDeptos(){
   const el = document.getElementById('deptosListado');
   if(!el) return;
   if(departamentos.length === 0){
-    el.innerHTML = '<div class="hist-empty">Aún no hay departamentos creados.</div>';
+    el.innerHTML = `<div class="hist-empty">${t('noDeptos')}</div>`;
     return;
   }
   el.innerHTML = '<div class="users-wrap">' +
@@ -1458,12 +1579,11 @@ function renderDeptos(){
 function hideAllViews(){
   tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active');
   viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none';
-  filterRow.style.display='none';
 }
 tabBuscar.addEventListener('click', () => {
   hideAllViews();
   tabBuscar.classList.add('active');
-  viewBuscar.style.display='block'; filterRow.style.display='flex';
+  viewBuscar.style.display='block';
 });
 tabHist.addEventListener('click', async () => {
   if(!can('verHistorialCompleto')){ alert('Tu rol no tiene acceso al historial completo. Consulta tus pedidos en 📋 Pedidos.'); return; }
@@ -1675,6 +1795,18 @@ function consolidateSyncRows(rows){
 
 const btnSync = document.getElementById('btnSync');
 const syncStatus = document.getElementById('syncStatus');
+
+document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
+
+const btnMoreMenu = document.getElementById('btnMoreMenu');
+const moreMenu = document.getElementById('moreMenu');
+btnMoreMenu.addEventListener('click', (e) => { e.stopPropagation(); moreMenu.classList.toggle('show'); });
+document.addEventListener('click', (e) => { if(!moreMenu.contains(e.target) && e.target !== btnMoreMenu) moreMenu.classList.remove('show'); });
+moreMenu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => moreMenu.classList.remove('show')));
+
+const btnToggleFilters = document.getElementById('btnToggleFilters');
+btnToggleFilters.addEventListener('click', () => filterRow.classList.toggle('show'));
+
 
 function renderSyncStatus(){
   if(!lastSyncInfo){ syncStatus.textContent = 'Aún no se ha sincronizado con la hoja.'; syncStatus.className='sync-status'; return; }
@@ -1897,6 +2029,7 @@ document.getElementById('exportConfirm').addEventListener('click', () => {
   renderHist();
   renderSyncStatus();
   aplicarVisibilidadRBAC();
+  applyLang(currentLang);
 })();
 </script>
 </body>
