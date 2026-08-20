@@ -120,6 +120,14 @@
   .modal .action-tab.disabled{opacity:.4;cursor:not-allowed;}
   .pin-note{font-size:10.5px;color:var(--muted);margin-top:4px;}
   .who-badge.pin{background:#e8d9c0;color:#8a5a00;}
+  .edit-toggle-row{display:flex;gap:14px;margin:2px 0 10px;}
+  .link-btn{background:none;border:none;padding:4px 0;font-family:Arial,sans-serif;font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;touch-action:manipulation;}
+  .link-btn.danger{color:var(--danger);}
+  .search-tools{display:flex;gap:6px;margin-top:6px;}
+  .search-tool-btn{font-family:Arial,sans-serif;font-size:11.5px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;min-height:34px;touch-action:manipulation;}
+  .photo-search-bar{display:flex;align-items:center;gap:8px;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:8px;padding:8px 12px;margin:0 12px 8px;font-family:Arial,sans-serif;font-size:12px;}
+  .photo-search-bar button{margin-left:auto;background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:12px;}
+  .match-score{font-size:10px;color:var(--ok);font-weight:700;}
 
   /* ===== Cabecera compacta ===== */
   header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
@@ -141,6 +149,8 @@
   .hdr-toggle-filters{font-family:Arial,sans-serif;font-size:11px;padding:6px 10px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;flex-shrink:0;min-height:34px;touch-action:manipulation;}
   #filterRow{display:none;margin-top:6px;}
   #filterRow.show{display:flex;}
+  #filterRowTools{display:none;}
+  #filterRowTools.show{display:flex;}
   .sync-status:empty, .reconteo-hint:empty{display:none;}
   .sync-status{margin:4px 0 0;font-size:10px;}
 
@@ -224,7 +234,13 @@
     <label class="chk"><input type="checkbox" id="onlyInferred"> <span data-i18n="onlyInferred">Nombre a revisar</span></label>
     <label class="chk"><input type="checkbox" id="onlySinDato"> <span data-i18n="onlySinDato">Sin dato de stock</span></label>
   </div>
+  <div class="search-tools" id="filterRowTools">
+    <button class="search-tool-btn" id="btnSearchByLabel" data-i18n="btnBuscarEtiqueta">🔍 Buscar por etiqueta</button>
+    <button class="search-tool-btn" id="btnSearchByPhoto" data-i18n="btnBuscarFoto">📷 Buscar por foto</button>
+    <input type="file" accept="image/*" capture="environment" id="photoSearchInput" style="display:none;">
+  </div>
 </header>
+
 
 <div class="overlay" id="overlayUser">
   <div class="modal">
@@ -249,6 +265,7 @@
 
 
 <div id="viewBuscar">
+  <div class="photo-search-bar" id="photoSearchBar" style="display:none;"></div>
   <div class="count" id="count"></div>
   <div class="grid" id="grid"></div>
 </div>
@@ -325,6 +342,26 @@
   <div class="modal">
     <h2 id="mProd"></h2>
     <div class="m-specs" id="mSpecs"></div>
+    <div class="edit-toggle-row" id="editToggleRow" data-perm="productCRUD">
+      <button class="link-btn" id="mEditToggle" data-i18n="btnEditarArticulo">✏️ Editar artículo</button>
+      <button class="link-btn danger" id="mDeleteItem" data-i18n="btnEliminarArticulo">🗑️ Eliminar artículo</button>
+    </div>
+    <div id="mEditPanel" style="display:none;">
+      <label data-i18n="lblNombreProducto">Nombre del producto</label>
+      <input type="text" id="editProducto">
+      <label data-i18n="lblEspecificaciones">Especificaciones</label>
+      <input type="text" id="editSpecs">
+      <label data-i18n="lblArea">Área</label>
+      <input type="text" id="editArea">
+      <label data-i18n="lblCodigo">Código(s)</label>
+      <input type="text" id="editCodigos">
+      <div class="err" id="editErr"></div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="editCancel" data-i18n="cancelar">Cancelar</button>
+        <button class="btn btn-primary" id="editSave" data-i18n="btnGuardarCambios">Guardar cambios</button>
+      </div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--line);">
+    </div>
     <div class="photo-row">
       <div class="photo-preview" id="mPhotoPreview"><span class="noimg" data-i18n="sinFoto">sin foto</span></div>
       <div class="photo-actions">
@@ -513,6 +550,17 @@ const I18N = {
     procesando: 'Procesando...', errorIntenta: 'Error, intenta de nuevo', fotoActualizada: '✓ Foto actualizada',
     fotoReportadaOk: '✓ Foto reportada — gracias', fotoLista: '✓ Foto lista — cambiar', guardando: 'Guardando...',
     btnRecalcStock: 'Recalcular stock',
+    btnEditarArticulo: '✏️ Editar artículo', btnEliminarArticulo: '🗑️ Eliminar artículo', btnGuardarCambios: 'Guardar cambios',
+    lblCodigo: 'Código(s)', sinPermisoEditar: 'Tu rol no puede editar ni eliminar artículos.',
+    errNombreVacio: 'El nombre del producto no puede estar vacío.', errCodigoVacio: 'El código no puede estar vacío.',
+    errorGuardarGenerico: 'No se pudo guardar. Revisa tu conexión.',
+    confirmEliminarArticulo: 'Vas a eliminar "{n}" del inventario. Esta acción no se puede deshacer. ¿Continuar?',
+    btnBuscarEtiqueta: '🔍 Buscar por etiqueta', btnBuscarFoto: '📷 Buscar por foto',
+    analizandoFoto: 'Analizando foto y comparando con las imágenes del inventario...',
+    sinCoincidenciasFoto: 'No se encontraron artículos con foto similar.',
+    resultadosFoto: 'coincidencias por foto, ordenadas por parecido',
+    volverBusquedaNormal: '← Volver a la búsqueda normal', errorAnalizarFoto: 'No se pudo analizar la foto.',
+    etiquetaNoEncontrada: 'No se encontró ningún artículo con ese código.',
     confirmRecalculo: 'Esto recalculará el stock disponible de TODOS los artículos a partir del historial de movimientos (stock inicial + entradas − salidas ± ajustes) y sobrescribirá el saldo actual. ¿Continuar?',
     recalculando: 'Recalculando...', recalculoOk: '✓ Recálculo completado: {n} artículo(s) actualizado(s).',
     errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
@@ -573,6 +621,17 @@ const I18N = {
     procesando: 'Processing...', errorIntenta: 'Error, try again', fotoActualizada: '✓ Photo updated',
     fotoReportadaOk: '✓ Photo reported — thanks', fotoLista: '✓ Photo ready — change', guardando: 'Saving...',
     btnRecalcStock: 'Recalculate stock',
+    btnEditarArticulo: '✏️ Edit item', btnEliminarArticulo: '🗑️ Delete item', btnGuardarCambios: 'Save changes',
+    lblCodigo: 'Code(s)', sinPermisoEditar: 'Your role cannot edit or delete items.',
+    errNombreVacio: 'The product name cannot be empty.', errCodigoVacio: 'The code cannot be empty.',
+    errorGuardarGenerico: 'Could not save. Check your connection.',
+    confirmEliminarArticulo: 'You are about to delete "{n}" from inventory. This cannot be undone. Continue?',
+    btnBuscarEtiqueta: '🔍 Search by label', btnBuscarFoto: '📷 Search by photo',
+    analizandoFoto: 'Analyzing photo and comparing with inventory images...',
+    sinCoincidenciasFoto: 'No items with a similar photo were found.',
+    resultadosFoto: 'photo matches, sorted by similarity',
+    volverBusquedaNormal: '← Back to normal search', errorAnalizarFoto: 'Could not analyze the photo.',
+    etiquetaNoEncontrada: 'No item found with that code.',
     confirmRecalculo: 'This will recalculate the available stock of ALL items from the movement history (initial stock + inflows − outflows ± adjustments) and overwrite the current balance. Continue?',
     recalculando: 'Recalculating...', recalculoOk: '✓ Recalculation complete: {n} item(s) updated.',
     errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
@@ -633,6 +692,17 @@ const I18N = {
     procesando: 'Inachakata...', errorIntenta: 'Hitilafu, jaribu tena', fotoActualizada: '✓ Picha imesasishwa',
     fotoReportadaOk: '✓ Picha imeripotiwa — asante', fotoLista: '✓ Picha tayari — badilisha', guardando: 'Inahifadhi...',
     btnRecalcStock: 'Hesabu upya hisa',
+    btnEditarArticulo: '✏️ Hariri bidhaa', btnEliminarArticulo: '🗑️ Futa bidhaa', btnGuardarCambios: 'Hifadhi mabadiliko',
+    lblCodigo: 'Msimbo', sinPermisoEditar: 'Wadhifa wako hauwezi kuhariri au kufuta bidhaa.',
+    errNombreVacio: 'Jina la bidhaa haliwezi kuwa tupu.', errCodigoVacio: 'Msimbo hauwezi kuwa tupu.',
+    errorGuardarGenerico: 'Imeshindwa kuhifadhi. Angalia muunganisho wako.',
+    confirmEliminarArticulo: 'Utafuta "{n}" kutoka hisa. Hatua hii haiwezi kutenguliwa. Endelea?',
+    btnBuscarEtiqueta: '🔍 Tafuta kwa lebo', btnBuscarFoto: '📷 Tafuta kwa picha',
+    analizandoFoto: 'Inachambua picha na kulinganisha na picha za hisa...',
+    sinCoincidenciasFoto: 'Hakuna bidhaa yenye picha inayofanana iliyopatikana.',
+    resultadosFoto: 'zinazolingana kwa picha, zimepangwa kwa ufanano',
+    volverBusquedaNormal: '← Rudi kwenye utafutaji wa kawaida', errorAnalizarFoto: 'Imeshindwa kuchambua picha.',
+    etiquetaNoEncontrada: 'Hakuna bidhaa iliyopatikana na msimbo huo.',
     confirmRecalculo: 'Hii itahesabu upya hisa inayopatikana ya bidhaa ZOTE kutoka historia ya mienendo (hisa ya awali + kuingia − kutoka ± marekebisho) na kubadilisha salio la sasa. Endelea?',
     recalculando: 'Inahesabu upya...', recalculoOk: '✓ Uhesabuji umekamilika: bidhaa {n} zimesasishwa.',
     errorGuardarRecalculo: '✗ Imeshindwa kuhifadhi uhesabuji upya:', sinPermisoRecalculo: 'Wadhifa wako hauwezi kuhesabu upya hisa.',
@@ -702,6 +772,8 @@ let syncNewItems = [];    // items que aparecieron en la hoja y no existian loca
 let lastSyncInfo = null;  // {ts, updated, added}
 let users = [];           // [{name, pin, role, departamentoId}]
 let departamentos = [];   // [{id, nombre}]
+let itemOverrides = {};   // itemId -> {producto, specs, area, codigos} editados manualmente
+let deletedItemIds = {};  // itemId -> true (eliminado por el equipo)
 let hotelAreas = ['GRIL/ BEACH BAR/HELADERIA','Buffet','MAIN POOL & GARDEN','PRESTIGE BAR','STAFF CANTEEN','Operacion Habitaciones'];
 let orderCounter = 0;
 let currentUser = null;   // {name, pin} de la persona identificada en este dispositivo/sesion
@@ -719,6 +791,25 @@ function applySyncData(){
       byId[ni.id] = ni;
     }
   });
+}
+
+function applyLocalOverrides(){
+  // aplicar ediciones manuales (nombre/specs/area/codigos) guardadas por el equipo
+  Object.keys(itemOverrides).forEach(id => {
+    const it = byId[id];
+    if(it) Object.assign(it, itemOverrides[id]);
+  });
+  // quitar items eliminados de DATA y extraItems (no solo ocultarlos)
+  const idsAEliminar = Object.keys(deletedItemIds).filter(id => deletedItemIds[id]);
+  if(idsAEliminar.length){
+    idsAEliminar.forEach(id => {
+      delete byId[id];
+      const iData = DATA.findIndex(it => it.id === id);
+      if(iData !== -1) DATA.splice(iData, 1);
+      const iExtra = extraItems.findIndex(it => it.id === id);
+      if(iExtra !== -1) extraItems.splice(iExtra, 1);
+    });
+  }
 }
 
 async function loadState(){
@@ -739,6 +830,8 @@ async function loadState(){
       usersServidor.forEach(su => { if(!usersFusionados.some(u => u.pin === su.pin)) usersFusionados.push(su); });
       users = usersFusionados;
       departamentos = s.departamentos || [];
+      itemOverrides = s.itemOverrides || {};
+      deletedItemIds = s.deletedItemIds || {};
       hotelAreas = s.hotelAreas || hotelAreas;
       orderCounter = s.orderCounter || 0;
     } else {
@@ -760,7 +853,7 @@ async function loadState(){
   }catch(e){
     console.error('Error cargando estado', e);
     stockState = {}; movements = []; extraItems = []; flaggedPhotos = {};
-    photoOverrides = {}; users = []; departamentos = []; orderCounter = 0;
+    photoOverrides = {}; users = []; departamentos = []; itemOverrides = {}; deletedItemIds = {}; orderCounter = 0;
   }
   try{
     const r6 = await window.storage.get('sync_overlay', true);
@@ -777,13 +870,14 @@ async function loadState(){
   // registrar items nuevos en byId por si aun no estaban
   extraItems.forEach(it => byId[it.id] = it);
   applySyncData();
+  applyLocalOverrides();
 }
 let lastSaveError = '';
 async function saveState(){
   try{
     const payload = {
       stockState, movements, extraItems, flaggedPhotos, photoOverrides,
-      users, departamentos, hotelAreas, orderCounter
+      users, departamentos, itemOverrides, deletedItemIds, hotelAreas, orderCounter
     };
     const json = JSON.stringify(payload);
     const sizeKB = Math.round(new Blob([json]).size / 1024);
@@ -849,23 +943,29 @@ function render(){
   const movedOnly = onlyMoved.checked;
   const movedSet = movedItemIds();
 
-  const filtered = allItems().filter(it => {
-    if(area && it.area !== area) return false;
-    if(fusionOnly && !it.fusionado) return false;
-    if(movedOnly && !movedSet.has(it.id)) return false;
-    if(onlyInferred.checked && !it.nombreInferido) return false;
-    if(onlySinDato.checked && disponibleDe(it) !== null) return false;
-    if(q){
-      const hay = (it.producto+' '+it.specs+' '+it.codigos+' '+it.area).toLowerCase();
-      if(!hay.includes(q)) return false;
-    }
-    return true;
-  });
+  let filtered;
+  if(photoSearchMatches){
+    const ordenIds = photoSearchMatches.map(m => m.id);
+    filtered = ordenIds.map(id => byId[id]).filter(Boolean);
+  } else {
+    filtered = allItems().filter(it => {
+      if(area && it.area !== area) return false;
+      if(fusionOnly && !it.fusionado) return false;
+      if(movedOnly && !movedSet.has(it.id)) return false;
+      if(onlyInferred.checked && !it.nombreInferido) return false;
+      if(onlySinDato.checked && disponibleDe(it) !== null) return false;
+      if(q){
+        const hay = (it.producto+' '+it.specs+' '+it.codigos+' '+it.area).toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
 
   countEl.textContent = filtered.length + ' ' + (filtered.length===1? t('resultado') : t('resultados'));
 
   if(filtered.length === 0){
-    grid.innerHTML = '<div class="empty">' + t('sinResultados') + '</div>';
+    grid.innerHTML = '<div class="empty">' + (photoSearchMatches ? t('sinCoincidenciasFoto') : t('sinResultados')) + '</div>';
     return;
   }
 
@@ -880,6 +980,7 @@ function render(){
     const dispLine = sinDato
       ? `<div class="disponible sindato-txt">${t('sinDatoTxt')}</div>`
       : `<div class="disponible ${disp>0?'pos':'neg'}">${t('dispLabel')} ${fmtNum(disp)}</div>`;
+    const matchInfo = photoSearchMatches ? photoSearchMatches.find(m => m.id === it.id) : null;
     card.innerHTML = `
       <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : `<span class="noimg">${t('sinFoto')}</span>`}</div>
       <div class="body">
@@ -889,6 +990,7 @@ function render(){
         <div class="codes">${it.codigos}</div>
         <div class="stocks"><span>${t('reqLabel')} <b>${fmtNum(it.qtyReq)}</b></span></div>
         ${dispLine}
+        ${matchInfo ? `<div class="match-score">≈ ${matchInfo.pct}%</div>` : ''}
         ${it.fusionado ? `<div class="fusion-badge">${t('fusionBadge')}</div>` : ''}
         ${it.nombreInferido ? `<div class="infer-badge">${t('inferBadge')}</div>` : ''}
       </div>`;
@@ -899,7 +1001,95 @@ function render(){
   grid.appendChild(frag);
 }
 
-const overlay = document.getElementById('overlay');
+// ===================== Buscar por foto (hash perceptual, comparación local) =====================
+let photoSearchMatches = null; // null = modo normal | [{id, pct}] ordenado por parecido
+const photoSearchBar = document.getElementById('photoSearchBar');
+const photoSearchInput = document.getElementById('photoSearchInput');
+const btnSearchByPhoto = document.getElementById('btnSearchByPhoto');
+
+function base64ToImage(b64){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = b64.startsWith('data:') ? b64 : 'data:image/jpeg;base64,' + b64;
+  });
+}
+
+async function hashDeImagen(b64){
+  const img = await base64ToImage(b64);
+  const size = 9; // 9x8 para difference-hash de 64 bits
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = 8;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, size, 8);
+  const data = ctx.getImageData(0, 0, size, 8).data;
+  const gray = [];
+  for(let i = 0; i < data.length; i += 4){
+    gray.push(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
+  }
+  let bits = '';
+  for(let row = 0; row < 8; row++){
+    for(let col = 0; col < 8; col++){
+      const idx = row*size + col;
+      bits += gray[idx] > gray[idx+1] ? '1' : '0';
+    }
+  }
+  return bits;
+}
+
+function distanciaHamming(a, b){
+  let d = 0;
+  for(let i = 0; i < a.length; i++) if(a[i] !== b[i]) d++;
+  return d;
+}
+
+async function buscarPorFoto(base64Query){
+  photoSearchBar.style.display = 'flex';
+  photoSearchBar.innerHTML = `<span>🔎 ${t('analizandoFoto')}</span>`;
+  filterRow.classList.add('show');
+  document.getElementById('filterRowTools').classList.add('show');
+  try{
+    const hashQuery = await hashDeImagen(base64Query);
+    const candidatos = allItems().filter(it => fotoDe(it));
+    const resultados = [];
+    for(const it of candidatos){
+      try{
+        const h = await hashDeImagen(fotoDe(it));
+        const dist = distanciaHamming(hashQuery, h);
+        const pct = Math.round((1 - dist/64) * 100);
+        if(pct >= 55) resultados.push({ id: it.id, pct });
+      }catch(e){ /* foto invalida, se ignora */ }
+    }
+    resultados.sort((a,b) => b.pct - a.pct);
+    photoSearchMatches = resultados.slice(0, 40);
+    photoSearchBar.innerHTML = `<span>📷 ${photoSearchMatches.length} ${t('resultadosFoto')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    document.getElementById('btnClearPhotoSearch').addEventListener('click', limpiarBusquedaPorFoto);
+    render();
+  }catch(err){
+    console.error(err);
+    photoSearchBar.innerHTML = `<span>✗ ${t('errorAnalizarFoto')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    document.getElementById('btnClearPhotoSearch').addEventListener('click', limpiarBusquedaPorFoto);
+  }
+}
+
+function limpiarBusquedaPorFoto(){
+  photoSearchMatches = null;
+  photoSearchBar.style.display = 'none';
+  photoSearchBar.innerHTML = '';
+  photoSearchInput.value = '';
+  render();
+}
+
+btnSearchByPhoto.addEventListener('click', () => photoSearchInput.click());
+photoSearchInput.addEventListener('change', () => {
+  const file = photoSearchInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => buscarPorFoto(reader.result);
+  reader.readAsDataURL(file);
+});
+
 const mProd = document.getElementById('mProd');
 const mSpecs = document.getElementById('mSpecs');
 const mDisp = document.getElementById('mDisp');
@@ -976,12 +1166,84 @@ function openModal(id){
   atCount.disabled = !puedeContar;
   atCount.classList.toggle('disabled', !puedeContar);
   setMode(sinDato ? 'count' : 'mov');
+  mEditPanel.style.display = 'none';
+  editErr.style.display = 'none';
   overlay.classList.add('show');
 }
 function closeModal(){ overlay.classList.remove('show'); currentItemId = null; }
 
 document.getElementById('mCancel').addEventListener('click', closeModal);
 overlay.addEventListener('click', e => { if(e.target === overlay) closeModal(); });
+
+// ===== Editar / Eliminar artículo (ALMACENISTA / MASTER) =====
+const mEditToggle = document.getElementById('mEditToggle');
+const mEditPanel = document.getElementById('mEditPanel');
+const editProducto = document.getElementById('editProducto');
+const editSpecs = document.getElementById('editSpecs');
+const editArea = document.getElementById('editArea');
+const editCodigos = document.getElementById('editCodigos');
+const editErr = document.getElementById('editErr');
+const mDeleteItem = document.getElementById('mDeleteItem');
+
+mEditToggle.addEventListener('click', () => {
+  if(!can('productCRUD')){ alert(t('sinPermisoEditar')); return; }
+  const it = byId[currentItemId];
+  if(!it) return;
+  editProducto.value = it.producto || '';
+  editSpecs.value = it.specs || '';
+  editArea.value = it.area || '';
+  editCodigos.value = it.codigos || '';
+  editErr.style.display = 'none';
+  mEditPanel.style.display = mEditPanel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('editCancel').addEventListener('click', () => { mEditPanel.style.display = 'none'; });
+
+document.getElementById('editSave').addEventListener('click', async () => {
+  if(!can('productCRUD')){ alert(t('sinPermisoEditar')); return; }
+  const it = byId[currentItemId];
+  if(!it) return;
+  const nProducto = editProducto.value.trim();
+  const nCodigos = editCodigos.value.trim();
+  if(!nProducto){ editErr.textContent = t('errNombreVacio'); editErr.style.display='block'; return; }
+  if(!nCodigos){ editErr.textContent = t('errCodigoVacio'); editErr.style.display='block'; return; }
+  const cambios = { producto: nProducto, specs: editSpecs.value.trim(), area: editArea.value.trim() || it.area, codigos: nCodigos };
+  const saveBtn = document.getElementById('editSave');
+  saveBtn.disabled = true;
+  saveBtn.textContent = t('guardando');
+  await loadState();
+  const itFresh = byId[currentItemId];
+  Object.assign(itFresh, cambios);
+  itemOverrides[currentItemId] = Object.assign({}, itemOverrides[currentItemId], cambios);
+  const ok = await saveState();
+  saveBtn.disabled = false;
+  saveBtn.textContent = t('btnGuardarCambios');
+  if(!ok){
+    editErr.textContent = '✗ ' + (lastSaveError || t('errorGuardarGenerico')); editErr.style.display='block'; return;
+  }
+  mEditPanel.style.display = 'none';
+  mProd.textContent = itFresh.producto;
+  mSpecs.textContent = itFresh.specs || itFresh.codigos;
+  mArea.textContent = itFresh.area;
+  render();
+});
+
+mDeleteItem.addEventListener('click', async () => {
+  if(!can('productCRUD')){ alert(t('sinPermisoEditar')); return; }
+  const it = byId[currentItemId];
+  if(!it) return;
+  if(!confirm(t('confirmEliminarArticulo').replace('{n}', it.producto || it.codigos))) return;
+  await loadState();
+  deletedItemIds[currentItemId] = true;
+  const ok = await saveState();
+  if(!ok){
+    delete deletedItemIds[currentItemId];
+    alert('✗ ' + (lastSaveError || t('errorGuardarGenerico')));
+    return;
+  }
+  applyLocalOverrides();
+  closeModal();
+  render();
+});
 
 mFlagPhoto.addEventListener('click', async () => {
   const it = byId[currentItemId];
@@ -1304,6 +1566,7 @@ const scanErr = document.getElementById('scanErr');
 let scannerStream = null;
 let scannerLoopId = null;
 let barcodeDetector = null;
+let scannerTargetInput = null; // input donde se escribe el codigo detectado
 
 function stopScanner(){
   if(scannerLoopId){ cancelAnimationFrame(scannerLoopId); scannerLoopId = null; }
@@ -1316,7 +1579,10 @@ async function scanLoop(){
   try{
     const codes = await barcodeDetector.detect(scannerVideo);
     if(codes && codes.length){
-      naCodigo.value = codes[0].rawValue;
+      if(scannerTargetInput){
+        scannerTargetInput.value = codes[0].rawValue;
+        scannerTargetInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       stopScanner();
       return;
     }
@@ -1324,7 +1590,8 @@ async function scanLoop(){
   scannerLoopId = requestAnimationFrame(scanLoop);
 }
 
-naScanBarcode.addEventListener('click', async () => {
+async function abrirEscaner(targetInput){
+  scannerTargetInput = targetInput;
   scanErr.style.display = 'none';
   if(!('BarcodeDetector' in window)){
     scanErr.textContent = 'Tu navegador no soporta el escaneo de códigos. Usa la foto de arriba y escribe el código a mano.';
@@ -1344,9 +1611,14 @@ naScanBarcode.addEventListener('click', async () => {
     scanErr.style.display = 'block';
     overlayScanner.classList.add('show');
   }
-});
+}
+
+naScanBarcode.addEventListener('click', () => abrirEscaner(naCodigo));
 document.getElementById('scanCancel').addEventListener('click', stopScanner);
 overlayScanner.addEventListener('click', e => { if(e.target === overlayScanner) stopScanner(); });
+
+// ===== Buscar por etiqueta (escanear codigo y filtrar el buscador) =====
+document.getElementById('btnSearchByLabel').addEventListener('click', () => abrirEscaner(search));
 
 // ===================== Usuarios (identificacion con PIN individual) =====================
 const overlayUser = document.getElementById('overlayUser');
@@ -1751,7 +2023,10 @@ tabDeptos.addEventListener('click', async () => {
   renderDeptos();
 });
 
-search.addEventListener('input', render);
+search.addEventListener('input', () => {
+  if(photoSearchMatches) limpiarBusquedaPorFoto();
+  else render();
+});
 areaFilter.addEventListener('change', render);
 onlyFusion.addEventListener('change', render);
 onlyMoved.addEventListener('change', render);
@@ -1934,7 +2209,10 @@ document.addEventListener('click', (e) => { if(!moreMenu.contains(e.target) && e
 moreMenu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => moreMenu.classList.remove('show')));
 
 const btnToggleFilters = document.getElementById('btnToggleFilters');
-btnToggleFilters.addEventListener('click', () => filterRow.classList.toggle('show'));
+btnToggleFilters.addEventListener('click', () => {
+  filterRow.classList.toggle('show');
+  document.getElementById('filterRowTools').classList.toggle('show');
+});
 
 
 function renderSyncStatus(){
