@@ -502,7 +502,7 @@ const I18N = {
     searchPh: 'Buscar por código, nombre o categoría...', allCategories: 'Todas las categorías',
     onlyFusion: 'Solo fusionados', onlyMoved: 'Con movimientos', onlyInferred: 'Nombre a revisar', onlySinDato: 'Sin dato de stock',
     sinFoto: 'sin foto', reqLabel: 'Req:', dispLabel: 'Disponible:', sinDatoTxt: 'Sin dato — usar Conteo físico',
-    fusionBadge: '⚠ códigos fusionados', inferBadge: '✎ nombre recuperado — revisar', sinResultados: 'Sin resultados.',
+    fusionBadge: '⚠ códigos fusionados', inferBadge: '✎ nombre recuperado — revisar', sinResultados: 'Sin resultados.', cargandoMas: 'Cargando más...',
     resultado: 'resultado', resultados: 'resultados',
     pendiente: '⏳ Pendiente', aprobado: '✓ Aprobado', rechazado: '✗ Rechazado',
     aprobar: '✓ Aprobar', rechazar: '✗ Rechazar', noPedidosPendientes: 'No hay pedidos pendientes.',
@@ -573,7 +573,7 @@ const I18N = {
     searchPh: 'Search by code, name or category...', allCategories: 'All categories',
     onlyFusion: 'Merged only', onlyMoved: 'With movements', onlyInferred: 'Name to review', onlySinDato: 'No stock data',
     sinFoto: 'no photo', reqLabel: 'Req:', dispLabel: 'Available:', sinDatoTxt: 'No data — use Physical count',
-    fusionBadge: '⚠ merged codes', inferBadge: '✎ recovered name — review', sinResultados: 'No results.',
+    fusionBadge: '⚠ merged codes', inferBadge: '✎ recovered name — review', sinResultados: 'No results.', cargandoMas: 'Loading more...',
     resultado: 'result', resultados: 'results',
     pendiente: '⏳ Pending', aprobado: '✓ Approved', rechazado: '✗ Rejected',
     aprobar: '✓ Approve', rechazar: '✗ Reject', noPedidosPendientes: 'No pending orders.',
@@ -644,7 +644,7 @@ const I18N = {
     searchPh: 'Tafuta kwa msimbo, jina au kategoria...', allCategories: 'Kategoria zote',
     onlyFusion: 'Zilizounganishwa tu', onlyMoved: 'Zenye mienendo', onlyInferred: 'Jina la kukagua', onlySinDato: 'Bila data ya hisa',
     sinFoto: 'hakuna picha', reqLabel: 'Haja:', dispLabel: 'Inapatikana:', sinDatoTxt: 'Hakuna data — tumia Hesabu halisi',
-    fusionBadge: '⚠ misimbo iliyounganishwa', inferBadge: '✎ jina lililopatikana — kagua', sinResultados: 'Hakuna matokeo.',
+    fusionBadge: '⚠ misimbo iliyounganishwa', inferBadge: '✎ jina lililopatikana — kagua', sinResultados: 'Hakuna matokeo.', cargandoMas: 'Inapakia zaidi...',
     resultado: 'matokeo', resultados: 'matokeo',
     pendiente: '⏳ Inasubiri', aprobado: '✓ Imeidhinishwa', rechazado: '✗ Imekataliwa',
     aprobar: '✓ Idhinisha', rechazar: '✗ Kataa', noPedidosPendientes: 'Hakuna maombi yanayosubiri.',
@@ -936,6 +936,66 @@ const countEl = document.getElementById('count');
 
 function movedItemIds(){ return new Set(movements.map(m => m.itemId)); }
 
+let filteredCache = [];
+let renderedCount = 0;
+const BATCH_SIZE = 60;
+let gridObserver = null;
+
+function buildCard(it){
+  const disp = disponibleDe(it);
+  const sinDato = disp === null || disp === undefined;
+  const foto = fotoDe(it);
+  const card = document.createElement('div');
+  card.className = 'card' + (it.fusionado?' fusion':'') + (!sinDato && disp<=0?' agotado':'') + (sinDato?' sindato':'');
+  card.dataset.id = it.id;
+  const dispLine = sinDato
+    ? `<div class="disponible sindato-txt">${t('sinDatoTxt')}</div>`
+    : `<div class="disponible ${disp>0?'pos':'neg'}">${t('dispLabel')} ${fmtNum(disp)}</div>`;
+  const matchInfo = photoSearchMatches ? photoSearchMatches.find(m => m.id === it.id) : null;
+  card.innerHTML = `
+    <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy" decoding="async">` : `<span class="noimg">${t('sinFoto')}</span>`}</div>
+    <div class="body">
+      <span class="area-tag">${it.area}</span>
+      <div class="prod">${it.producto || '(sin nombre)'}</div>
+      <div class="specs">${it.specs || ''}</div>
+      <div class="codes">${it.codigos}</div>
+      <div class="stocks"><span>${t('reqLabel')} <b>${fmtNum(it.qtyReq)}</b></span></div>
+      ${dispLine}
+      ${matchInfo ? `<div class="match-score">≈ ${matchInfo.pct}%</div>` : ''}
+      ${it.fusionado ? `<div class="fusion-badge">${t('fusionBadge')}</div>` : ''}
+      ${it.nombreInferido ? `<div class="infer-badge">${t('inferBadge')}</div>` : ''}
+    </div>`;
+  card.addEventListener('click', () => openModal(it.id));
+  return card;
+}
+
+function renderNextBatch(){
+  const siguiente = filteredCache.slice(renderedCount, renderedCount + BATCH_SIZE);
+  const frag = document.createDocumentFragment();
+  siguiente.forEach(it => frag.appendChild(buildCard(it)));
+  grid.appendChild(frag);
+  renderedCount += siguiente.length;
+  updateSentinel();
+}
+
+function updateSentinel(){
+  const prev = document.getElementById('gridSentinel');
+  if(prev){ if(gridObserver) gridObserver.unobserve(prev); prev.remove(); }
+  if(renderedCount < filteredCache.length){
+    const sentinel = document.createElement('div');
+    sentinel.id = 'gridSentinel';
+    sentinel.style.cssText = 'grid-column:1/-1;padding:16px;text-align:center;color:var(--muted);font-family:Arial,sans-serif;font-size:12px;';
+    sentinel.textContent = t('cargandoMas');
+    grid.appendChild(sentinel);
+    if(!gridObserver){
+      gridObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if(e.isIntersecting){ gridObserver.unobserve(e.target); renderNextBatch(); } });
+      }, { rootMargin: '600px' });
+    }
+    gridObserver.observe(sentinel);
+  }
+}
+
 function render(){
   const q = search.value.trim().toLowerCase();
   const area = areaFilter.value;
@@ -964,41 +1024,16 @@ function render(){
 
   countEl.textContent = filtered.length + ' ' + (filtered.length===1? t('resultado') : t('resultados'));
 
+  filteredCache = filtered;
+  renderedCount = 0;
+  grid.innerHTML = '';
+
   if(filtered.length === 0){
     grid.innerHTML = '<div class="empty">' + (photoSearchMatches ? t('sinCoincidenciasFoto') : t('sinResultados')) + '</div>';
     return;
   }
 
-  const frag = document.createDocumentFragment();
-  filtered.forEach(it => {
-    const disp = disponibleDe(it);
-    const sinDato = disp === null || disp === undefined;
-    const foto = fotoDe(it);
-    const card = document.createElement('div');
-    card.className = 'card' + (it.fusionado?' fusion':'') + (!sinDato && disp<=0?' agotado':'') + (sinDato?' sindato':'');
-    card.dataset.id = it.id;
-    const dispLine = sinDato
-      ? `<div class="disponible sindato-txt">${t('sinDatoTxt')}</div>`
-      : `<div class="disponible ${disp>0?'pos':'neg'}">${t('dispLabel')} ${fmtNum(disp)}</div>`;
-    const matchInfo = photoSearchMatches ? photoSearchMatches.find(m => m.id === it.id) : null;
-    card.innerHTML = `
-      <div class="thumb">${foto ? `<img src="data:image/jpeg;base64,${foto}" loading="lazy">` : `<span class="noimg">${t('sinFoto')}</span>`}</div>
-      <div class="body">
-        <span class="area-tag">${it.area}</span>
-        <div class="prod">${it.producto || '(sin nombre)'}</div>
-        <div class="specs">${it.specs || ''}</div>
-        <div class="codes">${it.codigos}</div>
-        <div class="stocks"><span>${t('reqLabel')} <b>${fmtNum(it.qtyReq)}</b></span></div>
-        ${dispLine}
-        ${matchInfo ? `<div class="match-score">≈ ${matchInfo.pct}%</div>` : ''}
-        ${it.fusionado ? `<div class="fusion-badge">${t('fusionBadge')}</div>` : ''}
-        ${it.nombreInferido ? `<div class="infer-badge">${t('inferBadge')}</div>` : ''}
-      </div>`;
-    card.addEventListener('click', () => openModal(it.id));
-    frag.appendChild(card);
-  });
-  grid.innerHTML = '';
-  grid.appendChild(frag);
+  renderNextBatch();
 }
 
 // ===================== Buscar por foto (hash perceptual, comparación local) =====================
@@ -2023,9 +2058,11 @@ tabDeptos.addEventListener('click', async () => {
   renderDeptos();
 });
 
+let searchDebounceId = null;
 search.addEventListener('input', () => {
-  if(photoSearchMatches) limpiarBusquedaPorFoto();
-  else render();
+  if(photoSearchMatches){ limpiarBusquedaPorFoto(); return; }
+  clearTimeout(searchDebounceId);
+  searchDebounceId = setTimeout(render, 200);
 });
 areaFilter.addEventListener('change', render);
 onlyFusion.addEventListener('change', render);
