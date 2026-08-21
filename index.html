@@ -459,9 +459,12 @@
     <div class="scanner-frame">
       <video id="scannerVideo" autoplay playsinline muted></video>
     </div>
+    <canvas id="scannerCanvas" style="display:none;"></canvas>
     <div class="err" id="scanErr"></div>
+    <p class="pin-note" id="ocrStatus" style="display:none;"></p>
     <div class="actions">
       <button class="btn btn-secondary" id="scanCancel" data-i18n="cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="scanFullLabel" data-i18n="btnLeerEtiquetaCompleta" style="display:none;">📛 Leer etiqueta completa</button>
     </div>
   </div>
 </div>
@@ -561,6 +564,11 @@ const I18N = {
     resultadosFoto: 'coincidencias por foto, ordenadas por parecido',
     volverBusquedaNormal: '← Volver a la búsqueda normal', errorAnalizarFoto: 'No se pudo analizar la foto.',
     etiquetaNoEncontrada: 'No se encontró ningún artículo con ese código.',
+    btnLeerEtiquetaCompleta: '📛 Leer etiqueta completa', leyendoEtiqueta: 'Leyendo el texto de la etiqueta (puede tardar unos segundos)...',
+    etiquetaSinCoincidencias: 'No se encontró ningún artículo que coincida con el texto de la etiqueta.',
+    resultadosEtiqueta: 'coincidencias por texto de la etiqueta',
+    sinFotosParaComparar: 'No hay fotos guardadas en el inventario con las que comparar.',
+    coincidenciasDebiles: 'No hay coincidencias claras por foto. Prueba a buscar por nombre o código en su lugar.',
     confirmRecalculo: 'Esto recalculará el stock disponible de TODOS los artículos a partir del historial de movimientos (stock inicial + entradas − salidas ± ajustes) y sobrescribirá el saldo actual. ¿Continuar?',
     recalculando: 'Recalculando...', recalculoOk: '✓ Recálculo completado: {n} artículo(s) actualizado(s).',
     errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
@@ -632,6 +640,11 @@ const I18N = {
     resultadosFoto: 'photo matches, sorted by similarity',
     volverBusquedaNormal: '← Back to normal search', errorAnalizarFoto: 'Could not analyze the photo.',
     etiquetaNoEncontrada: 'No item found with that code.',
+    btnLeerEtiquetaCompleta: '📛 Read full label', leyendoEtiqueta: 'Reading the label text (this can take a few seconds)...',
+    etiquetaSinCoincidencias: 'No item matched the label text.',
+    resultadosEtiqueta: 'matches by label text',
+    sinFotosParaComparar: 'There are no saved photos in the inventory to compare with.',
+    coincidenciasDebiles: 'No clear photo matches. Try searching by name or code instead.',
     confirmRecalculo: 'This will recalculate the available stock of ALL items from the movement history (initial stock + inflows − outflows ± adjustments) and overwrite the current balance. Continue?',
     recalculando: 'Recalculating...', recalculoOk: '✓ Recalculation complete: {n} item(s) updated.',
     errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
@@ -703,6 +716,11 @@ const I18N = {
     resultadosFoto: 'zinazolingana kwa picha, zimepangwa kwa ufanano',
     volverBusquedaNormal: '← Rudi kwenye utafutaji wa kawaida', errorAnalizarFoto: 'Imeshindwa kuchambua picha.',
     etiquetaNoEncontrada: 'Hakuna bidhaa iliyopatikana na msimbo huo.',
+    btnLeerEtiquetaCompleta: '📛 Soma lebo yote', leyendoEtiqueta: 'Inasoma maandishi ya lebo (inaweza kuchukua sekunde chache)...',
+    etiquetaSinCoincidencias: 'Hakuna bidhaa iliyolingana na maandishi ya lebo.',
+    resultadosEtiqueta: 'zinazolingana kwa maandishi ya lebo',
+    sinFotosParaComparar: 'Hakuna picha zilizohifadhiwa kwenye hisa za kulinganisha.',
+    coincidenciasDebiles: 'Hakuna ulinganifu wazi kwa picha. Jaribu kutafuta kwa jina au msimbo badala yake.',
     confirmRecalculo: 'Hii itahesabu upya hisa inayopatikana ya bidhaa ZOTE kutoka historia ya mienendo (hisa ya awali + kuingia − kutoka ± marekebisho) na kubadilisha salio la sasa. Endelea?',
     recalculando: 'Inahesabu upya...', recalculoOk: '✓ Uhesabuji umekamilika: bidhaa {n} zimesasishwa.',
     errorGuardarRecalculo: '✗ Imeshindwa kuhifadhi uhesabuji upya:', sinPermisoRecalculo: 'Wadhifa wako hauwezi kuhesabu upya hisa.',
@@ -1051,7 +1069,9 @@ function base64ToImage(b64){
   });
 }
 
-async function hashDeImagen(b64){
+// Calcula un hash de forma (difference-hash 8x8) y el color promedio de la imagen,
+// para comparar tanto la silueta/forma como el color dominante.
+async function analizarImagen(b64){
   const img = await base64ToImage(b64);
   const size = 9; // 9x8 para difference-hash de 64 bits
   const canvas = document.createElement('canvas');
@@ -1060,8 +1080,10 @@ async function hashDeImagen(b64){
   ctx.drawImage(img, 0, 0, size, 8);
   const data = ctx.getImageData(0, 0, size, 8).data;
   const gray = [];
+  let r=0, g=0, b=0, n=0;
   for(let i = 0; i < data.length; i += 4){
     gray.push(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
+    r += data[i]; g += data[i+1]; b += data[i+2]; n++;
   }
   let bits = '';
   for(let row = 0; row < 8; row++){
@@ -1070,7 +1092,7 @@ async function hashDeImagen(b64){
       bits += gray[idx] > gray[idx+1] ? '1' : '0';
     }
   }
-  return bits;
+  return { bits, color: [r/n, g/n, b/n] };
 }
 
 function distanciaHamming(a, b){
@@ -1078,27 +1100,61 @@ function distanciaHamming(a, b){
   for(let i = 0; i < a.length; i++) if(a[i] !== b[i]) d++;
   return d;
 }
+function distanciaColor(c1, c2){
+  const dr = c1[0]-c2[0], dg = c1[1]-c2[1], db = c1[2]-c2[2];
+  return Math.sqrt(dr*dr + dg*dg + db*db); // 0..441.7
+}
+
+// Cache de analisis por item: se calcula una sola vez por sesion, asi las
+// busquedas siguientes (o con muchos articulos con foto) no vuelven a decodificar
+// todas las imagenes desde cero.
+const analisisCache = {};
+async function analisisDeItemCached(it){
+  if(analisisCache[it.id]) return analisisCache[it.id];
+  const a = await analizarImagen(fotoDe(it));
+  analisisCache[it.id] = a;
+  return a;
+}
+
+// Procesa un array en lotes con cierto grado de paralelismo, para no bloquear
+// el hilo principal ni tardar una eternidad en tablets con muchas fotos.
+async function procesarEnLotes(items, tam, fn){
+  for(let i = 0; i < items.length; i += tam){
+    await Promise.all(items.slice(i, i+tam).map(fn));
+    await new Promise(r => setTimeout(r, 0)); // ceder el hilo para no congelar la UI
+  }
+}
 
 async function buscarPorFoto(base64Query){
   photoSearchBar.style.display = 'flex';
-  photoSearchBar.innerHTML = `<span>🔎 ${t('analizandoFoto')}</span>`;
   filterRow.classList.add('show');
   document.getElementById('filterRowTools').classList.add('show');
   try{
-    const hashQuery = await hashDeImagen(base64Query);
+    const query = await analizarImagen(base64Query);
     const candidatos = allItems().filter(it => fotoDe(it));
+    let procesados = 0;
     const resultados = [];
-    for(const it of candidatos){
+    await procesarEnLotes(candidatos, 6, async (it) => {
       try{
-        const h = await hashDeImagen(fotoDe(it));
-        const dist = distanciaHamming(hashQuery, h);
-        const pct = Math.round((1 - dist/64) * 100);
-        if(pct >= 55) resultados.push({ id: it.id, pct });
+        const a = await analisisDeItemCached(it);
+        const pctForma = Math.round((1 - distanciaHamming(query.bits, a.bits)/64) * 100);
+        const pctColor = Math.round((1 - distanciaColor(query.color, a.color)/441.7) * 100);
+        const pct = Math.round(pctForma*0.65 + pctColor*0.35);
+        resultados.push({ id: it.id, pct, pctForma, pctColor });
       }catch(e){ /* foto invalida, se ignora */ }
-    }
+      procesados++;
+      photoSearchBar.innerHTML = `<span>🔎 ${t('analizandoFoto')} (${procesados}/${candidatos.length})</span>`;
+    });
     resultados.sort((a,b) => b.pct - a.pct);
     photoSearchMatches = resultados.slice(0, 40);
-    photoSearchBar.innerHTML = `<span>📷 ${photoSearchMatches.length} ${t('resultadosFoto')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    const mejor = photoSearchMatches[0];
+    if(!mejor){
+      photoSearchBar.innerHTML = `<span>✗ ${t('sinFotosParaComparar')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    } else if(mejor.pct < 55){
+      photoSearchBar.innerHTML = `<span>🤔 ${t('coincidenciasDebiles')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    } else {
+      photoSearchBar.innerHTML = `<span>📷 ${photoSearchMatches.length} ${t('resultadosFoto')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    }
     document.getElementById('btnClearPhotoSearch').addEventListener('click', limpiarBusquedaPorFoto);
     render();
   }catch(err){
@@ -1597,16 +1653,21 @@ naConfirm.addEventListener('click', async () => {
 // ---- Lector de codigo de barras / QR con la camara ----
 const overlayScanner = document.getElementById('overlayScanner');
 const scannerVideo = document.getElementById('scannerVideo');
+const scannerCanvas = document.getElementById('scannerCanvas');
 const scanErr = document.getElementById('scanErr');
+const ocrStatus = document.getElementById('ocrStatus');
+const scanFullLabel = document.getElementById('scanFullLabel');
 let scannerStream = null;
 let scannerLoopId = null;
 let barcodeDetector = null;
 let scannerTargetInput = null; // input donde se escribe el codigo detectado
+let scannerModoBusqueda = false; // true = se usa desde "Buscar por etiqueta"
 
 function stopScanner(){
   if(scannerLoopId){ cancelAnimationFrame(scannerLoopId); scannerLoopId = null; }
   if(scannerStream){ scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
   overlayScanner.classList.remove('show');
+  ocrStatus.style.display = 'none';
 }
 
 async function scanLoop(){
@@ -1625,8 +1686,10 @@ async function scanLoop(){
   scannerLoopId = requestAnimationFrame(scanLoop);
 }
 
-async function abrirEscaner(targetInput){
+async function abrirEscaner(targetInput, modoBusqueda){
   scannerTargetInput = targetInput;
+  scannerModoBusqueda = !!modoBusqueda;
+  scanFullLabel.style.display = scannerModoBusqueda ? 'inline-block' : 'none';
   scanErr.style.display = 'none';
   if(!('BarcodeDetector' in window)){
     scanErr.textContent = 'Tu navegador no soporta el escaneo de códigos. Usa la foto de arriba y escribe el código a mano.';
@@ -1648,12 +1711,84 @@ async function abrirEscaner(targetInput){
   }
 }
 
-naScanBarcode.addEventListener('click', () => abrirEscaner(naCodigo));
+naScanBarcode.addEventListener('click', () => abrirEscaner(naCodigo, false));
 document.getElementById('scanCancel').addEventListener('click', stopScanner);
 overlayScanner.addEventListener('click', e => { if(e.target === overlayScanner) stopScanner(); });
 
-// ===== Buscar por etiqueta (escanear codigo y filtrar el buscador) =====
-document.getElementById('btnSearchByLabel').addEventListener('click', () => abrirEscaner(search));
+// ===== Buscar por etiqueta (escanear codigo o leer la etiqueta completa por OCR) =====
+document.getElementById('btnSearchByLabel').addEventListener('click', () => abrirEscaner(search, true));
+
+let tesseractCargado = false;
+function cargarTesseract(){
+  return new Promise((resolve, reject) => {
+    if(typeof Tesseract !== 'undefined'){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('No se pudo cargar el lector de texto (OCR). Revisa tu conexión.'));
+    document.head.appendChild(s);
+  });
+}
+
+// palabras muy comunes en las etiquetas que no ayudan a buscar (ruido)
+const STOPWORDS_ETIQUETA = new Set(['the','and','for','with','made','material','size','color','from','este','esta','para','con','de','del','la','el','los','las','www','com']);
+
+function tokenizarTexto(texto){
+  return (texto || '')
+    .toLowerCase()
+    .split(/[^a-z0-9áéíóúñ]+/i)
+    .map(w => w.trim())
+    .filter(w => w.length >= 3 && !STOPWORDS_ETIQUETA.has(w));
+}
+
+function buscarPorTokens(tokens){
+  if(!tokens.length) return [];
+  const vistos = new Set();
+  const uniqueTokens = tokens.filter(w => vistos.has(w) ? false : (vistos.add(w), true));
+  const resultados = [];
+  allItems().forEach(it => {
+    const hay = (it.producto+' '+it.specs+' '+it.codigos+' '+it.area).toLowerCase();
+    let matched = 0;
+    uniqueTokens.forEach(tok => { if(hay.includes(tok)) matched++; });
+    if(matched > 0){
+      resultados.push({ id: it.id, pct: Math.round((matched/uniqueTokens.length)*100), matched });
+    }
+  });
+  resultados.sort((a,b) => b.matched - a.matched || b.pct - a.pct);
+  return resultados.slice(0, 40);
+}
+
+scanFullLabel.addEventListener('click', async () => {
+  if(!scannerStream){ return; }
+  const w = scannerVideo.videoWidth, h = scannerVideo.videoHeight;
+  scannerCanvas.width = w; scannerCanvas.height = h;
+  scannerCanvas.getContext('2d').drawImage(scannerVideo, 0, 0, w, h);
+  const foto = scannerCanvas.toDataURL('image/jpeg', 0.85);
+  stopScanner();
+  photoSearchBar.style.display = 'flex';
+  photoSearchBar.innerHTML = `<span>🔎 ${t('leyendoEtiqueta')}</span>`;
+  filterRow.classList.add('show');
+  document.getElementById('filterRowTools').classList.add('show');
+  try{
+    ocrStatus.style.display = 'none';
+    await cargarTesseract();
+    const { data } = await Tesseract.recognize(foto, 'eng+spa');
+    const tokens = tokenizarTexto(data.text);
+    const resultados = buscarPorTokens(tokens);
+    photoSearchMatches = resultados;
+    if(resultados.length === 0){
+      photoSearchBar.innerHTML = `<span>✗ ${t('etiquetaSinCoincidencias')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    } else {
+      photoSearchBar.innerHTML = `<span>📛 ${resultados.length} ${t('resultadosEtiqueta')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    }
+    document.getElementById('btnClearPhotoSearch').addEventListener('click', limpiarBusquedaPorFoto);
+    render();
+  }catch(err){
+    console.error(err);
+    photoSearchBar.innerHTML = `<span>✗ ${t('errorAnalizarFoto')}</span><button id="btnClearPhotoSearch">${t('volverBusquedaNormal')}</button>`;
+    document.getElementById('btnClearPhotoSearch').addEventListener('click', limpiarBusquedaPorFoto);
+  }
+});
 
 // ===================== Usuarios (identificacion con PIN individual) =====================
 const overlayUser = document.getElementById('overlayUser');
