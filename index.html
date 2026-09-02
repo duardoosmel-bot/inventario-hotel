@@ -215,7 +215,6 @@
     <div class="hdr-more-wrap">
       <button class="tabbtn" id="btnMoreMenu">⋯</button>
       <div class="hdr-more-menu" id="moreMenu">
-        <button id="btnSync">🔄 <span data-i18n="btnSync">Sync</span></button>
         <button id="btnReiniciarInventario" data-perm="userCRUD">🧹 <span data-i18n="btnReiniciarInventario">Reiniciar inventario</span></button>
       </div>
     </div>
@@ -224,8 +223,8 @@
     <button class="tabbtn user-btn" id="btnUser" data-i18n="btnIdentify">👤 Identificarse</button>
     <button class="hdr-toggle-filters" id="btnToggleFilters" data-i18n="btnFilters">Filtros ▾</button>
   </div>
-  <p class="sync-status" id="syncStatus"></p>
   <p class="reconteo-hint" id="reconteoHint" style="display:none;" data-i18n="reconteoHint">🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.</p>
+  <p class="sync-status err" id="globalErrorBanner" style="display:none;"></p>
   <div class="controls" id="filterRow">
     <input type="text" id="search" data-i18n-ph="searchPh" placeholder="Buscar por código, nombre o categoría...">
     <select id="areaFilter" title="Filtrar por categoría"><option value="" data-i18n="allCategories">Todas las categorías</option><option value="Additional items">Additional items</option><option value="Bar utensil Beach">Bar utensil Beach</option><option value="asiatic">asiatic</option><option value="bamboo">bamboo</option><option value="bar utensil garden">bar utensil garden</option><option value="bar utensil main">bar utensil main</option><option value="bar utensil room service">bar utensil room service</option><option value="baskets">baskets</option><option value="beach restaurant">beach restaurant</option><option value="buffet beach restaurant">buffet beach restaurant</option><option value="buffet rm">buffet rm</option><option value="dinner party">dinner party</option><option value="flatware">flatware</option><option value="guest rooms">guest rooms</option><option value="hamburguesas for main restaurant">hamburguesas for main restaurant</option><option value="holloware">holloware</option><option value="kitchen utensils asiatic">kitchen utensils asiatic</option><option value="kitchen utensils beach">kitchen utensils beach</option><option value="kitchen utensils rc">kitchen utensils rc</option><option value="kitchen utensils rm">kitchen utensils rm</option><option value="main pool">main pool</option><option value="main restaurant and rooms">main restaurant and rooms</option><option value="pastry">pastry</option><option value="pastry utensil">pastry utensil</option><option value="public areas">public areas</option><option value="restaurant beach carnivorous rm">restaurant beach carnivorous rm</option><option value="restaurants">restaurants</option><option value="restaurants and room">restaurants and room</option><option value="signage">signage</option><option value="staff canteen">staff canteen</option><option value="staff canteen buffet">staff canteen buffet</option><option value="staff canteen kitchen utensils">staff canteen kitchen utensils</option><option value="stewarding">stewarding</option><option value="trolley">trolley</option></select>
@@ -526,7 +525,7 @@ const I18N = {
   es: {
     appTitle: 'Inventario Hotel', appMetaTpl: '{n} artículos · {a} áreas',
     tabBuscar: 'Buscador', tabHist: 'Historial', tabPedidos: 'Pedidos', tabUsuarios: 'Usuarios', tabDeptos: 'Deptos',
-    btnReconteo: 'Reconteo', btnSync: 'Sync', btnIdentify: '👤 Identificarse', btnFilters: 'Filtros ▾',
+    btnReconteo: 'Reconteo', btnIdentify: '👤 Identificarse', btnFilters: 'Filtros ▾',
     reconteoHint: '🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.',
     searchPh: 'Buscar por código, nombre o categoría...', allCategories: 'Todas las categorías',
     onlyFusion: 'Solo fusionados', onlyMoved: 'Con movimientos', onlyInferred: 'Nombre a revisar', onlySinDato: 'Sin dato de stock',
@@ -573,8 +572,7 @@ const I18N = {
     lblTuNombre: 'Tu nombre', btnAgregar: 'Agregar',
     scannerTitulo: 'Escanear código', scannerTexto: 'Apunta la cámara al código de barras o QR de la etiqueta.',
     btnAgregarArticuloFlotante: '+ Agregar artículo',
-    reconteoActivo: '🔓 Reconteo activo', noSyncTodavia: 'Aún no se ha sincronizado con la hoja.',
-    ultimaSync: 'Última sync:', actualizados: 'actualizados', nuevos: 'nuevos',
+    reconteoActivo: '🔓 Reconteo activo',
     solicitandoComo: 'Solicitando como:', debeIdentificarse: '⚠ Debes identificarte (botón "Identificarse" arriba) para solicitar un movimiento.',
     procesando: 'Procesando...', errorIntenta: 'Error, intenta de nuevo', fotoActualizada: '✓ Foto actualizada',
     fotoReportadaOk: '✓ Foto reportada — gracias', fotoLista: '✓ Foto lista — cambiar', guardando: 'Guardando...',
@@ -594,7 +592,6 @@ const I18N = {
     confirmReiniciarInventario1: 'Esto va a BORRAR todos los artículos, fotos y el stock actual del inventario, dejándolo en blanco. El historial de movimientos anterior se conserva como consulta, igual que usuarios y departamentos. Esta acción no se puede deshacer. ¿Continuar?',
     confirmReiniciarInventario2: 'Confirmación final: se va a vaciar el inventario ahora mismo. ¿Seguro que quieres continuar?',
     reinicioOk: '✓ Inventario reiniciado. Ya puedes empezar a agregar artículos desde cero.',
-    confirmSyncTraeViejos: '⚠ Esto descarga los datos de la hoja de Google Sheets conectada. Si esa hoja todavía tiene el inventario anterior, sus artículos volverán a aparecer aquí. ¿Seguro que quieres sincronizar?',
     lblEscribeBorrar: 'Escribe BORRAR para confirmar', btnContinuar: 'Continuar', errEscribeBorrar: 'Escribe la palabra BORRAR (en mayúsculas) para confirmar.',
     articulosAgregadosSesion: 'artículo(s) agregado(s) en esta sesión',
     btnLeerEtiquetaCompleta: '📛 Leer etiqueta completa', leyendoEtiqueta: 'Leyendo el texto de la etiqueta (puede tardar unos segundos)...',
@@ -609,7 +606,7 @@ const I18N = {
   en: {
     appTitle: 'Hotel Inventory', appMetaTpl: '{n} items · {a} areas',
     tabBuscar: 'Search', tabHist: 'History', tabPedidos: 'Orders', tabUsuarios: 'Users', tabDeptos: 'Depts',
-    btnReconteo: 'Recount', btnSync: 'Sync', btnIdentify: '👤 Sign in', btnFilters: 'Filters ▾',
+    btnReconteo: 'Recount', btnIdentify: '👤 Sign in', btnFilters: 'Filters ▾',
     reconteoHint: '🔓 Recount mode active — filter by code, name or category below to find each item.',
     searchPh: 'Search by code, name or category...', allCategories: 'All categories',
     onlyFusion: 'Merged only', onlyMoved: 'With movements', onlyInferred: 'Name to review', onlySinDato: 'No stock data',
@@ -656,8 +653,7 @@ const I18N = {
     lblTuNombre: 'Your name', btnAgregar: 'Add',
     scannerTitulo: 'Scan code', scannerTexto: 'Point the camera at the barcode or QR on the label.',
     btnAgregarArticuloFlotante: '+ Add item',
-    reconteoActivo: '🔓 Recount active', noSyncTodavia: 'Not synced with the sheet yet.',
-    ultimaSync: 'Last sync:', actualizados: 'updated', nuevos: 'new',
+    reconteoActivo: '🔓 Recount active',
     solicitandoComo: 'Requesting as:', debeIdentificarse: '⚠ You must sign in (the "Sign in" button above) to request a movement.',
     procesando: 'Processing...', errorIntenta: 'Error, try again', fotoActualizada: '✓ Photo updated',
     fotoReportadaOk: '✓ Photo reported — thanks', fotoLista: '✓ Photo ready — change', guardando: 'Saving...',
@@ -677,7 +673,6 @@ const I18N = {
     confirmReiniciarInventario1: 'This will DELETE all items, photos and current stock, leaving the inventory empty. The previous movement history is kept for reference, same as users and departments. This cannot be undone. Continue?',
     confirmReiniciarInventario2: 'Final confirmation: the inventory will be wiped right now. Are you sure you want to continue?',
     reinicioOk: '✓ Inventory reset. You can now start adding items from scratch.',
-    confirmSyncTraeViejos: '⚠ This downloads data from the connected Google Sheet. If that sheet still has the old inventory, its items will reappear here. Are you sure you want to sync?',
     lblEscribeBorrar: 'Type DELETE to confirm', btnContinuar: 'Continue', errEscribeBorrar: 'Type the word DELETE (in capitals) to confirm.',
     articulosAgregadosSesion: 'item(s) added this session',
     btnLeerEtiquetaCompleta: '📛 Read full label', leyendoEtiqueta: 'Reading the label text (this can take a few seconds)...',
@@ -692,7 +687,7 @@ const I18N = {
   sw: {
     appTitle: 'Bohari ya Hoteli', appMetaTpl: 'bidhaa {n} · maeneo {a}',
     tabBuscar: 'Tafuta', tabHist: 'Historia', tabPedidos: 'Maombi', tabUsuarios: 'Watumiaji', tabDeptos: 'Idara',
-    btnReconteo: 'Hesabu upya', btnSync: 'Sync', btnIdentify: '👤 Ingia', btnFilters: 'Vichujio ▾',
+    btnReconteo: 'Hesabu upya', btnIdentify: '👤 Ingia', btnFilters: 'Vichujio ▾',
     reconteoHint: '🔓 Hali ya hesabu upya imewashwa — chuja kwa msimbo, jina au kategoria hapa chini kupata kila bidhaa.',
     searchPh: 'Tafuta kwa msimbo, jina au kategoria...', allCategories: 'Kategoria zote',
     onlyFusion: 'Zilizounganishwa tu', onlyMoved: 'Zenye mienendo', onlyInferred: 'Jina la kukagua', onlySinDato: 'Bila data ya hisa',
@@ -739,8 +734,7 @@ const I18N = {
     lblTuNombre: 'Jina lako', btnAgregar: 'Ongeza',
     scannerTitulo: 'Changanua msimbo', scannerTexto: 'Elekeza kamera kwenye msimbo wa bar au QR wa lebo.',
     btnAgregarArticuloFlotante: '+ Ongeza bidhaa',
-    reconteoActivo: '🔓 Hesabu upya hai', noSyncTodavia: 'Bado haijasawazishwa na jedwali.',
-    ultimaSync: 'Sync ya mwisho:', actualizados: 'zilizosasishwa', nuevos: 'mpya',
+    reconteoActivo: '🔓 Hesabu upya hai',
     solicitandoComo: 'Unaomba kama:', debeIdentificarse: '⚠ Lazima ujitambulishe (kitufe "Ingia" hapo juu) kuomba mwendo.',
     procesando: 'Inachakata...', errorIntenta: 'Hitilafu, jaribu tena', fotoActualizada: '✓ Picha imesasishwa',
     fotoReportadaOk: '✓ Picha imeripotiwa — asante', fotoLista: '✓ Picha tayari — badilisha', guardando: 'Inahifadhi...',
@@ -760,7 +754,6 @@ const I18N = {
     confirmReiniciarInventario1: 'Hii itafuta bidhaa zote, picha na hisa ya sasa, ikiacha hisa tupu. Historia ya awali ya mienendo itabaki kwa kumbukumbu, kama vile watumiaji na idara. Hatua hii haiwezi kutenguliwa. Endelea?',
     confirmReiniciarInventario2: 'Uthibitisho wa mwisho: hisa itafutwa sasa hivi. Una uhakika unataka kuendelea?',
     reinicioOk: '✓ Hisa imeanzishwa upya. Sasa unaweza kuanza kuongeza bidhaa kutoka mwanzo.',
-    confirmSyncTraeViejos: '⚠ Hii inapakua data kutoka Google Sheet iliyounganishwa. Kama karatasi hiyo bado ina hisa ya zamani, bidhaa zake zitaonekana tena hapa. Una uhakika unataka kusawazisha?',
     lblEscribeBorrar: 'Andika FUTA kuthibitisha', btnContinuar: 'Endelea', errEscribeBorrar: 'Andika neno FUTA (herufi kubwa) kuthibitisha.',
     articulosAgregadosSesion: 'bidhaa zilizoongezwa katika kikao hiki',
     btnLeerEtiquetaCompleta: '📛 Soma lebo yote', leyendoEtiqueta: 'Inasoma maandishi ya lebo (inaweza kuchukua sekunde chache)...',
@@ -797,7 +790,6 @@ function applyLang(lang){
   if(langSelect) langSelect.value = currentLang;
   if(typeof refreshUserUI === 'function') refreshUserUI();
   if(typeof refreshUnlockButton === 'function') refreshUnlockButton();
-  if(typeof renderSyncStatus === 'function') renderSyncStatus();
   if(typeof updateCountLockUI === 'function') updateCountLockUI();
   if(typeof render === 'function') render();
   if(typeof renderHist === 'function' && document.getElementById('viewHist').style.display !== 'none') renderHist();
@@ -809,19 +801,19 @@ function applyLang(lang){
 const byId = {};
 window.addEventListener('error', (e) => {
   console.error('Error global capturado:', e.error || e.message);
-  const el = document.getElementById('syncStatus');
+  const el = document.getElementById('globalErrorBanner');
   if(el){
+    el.style.display = 'block';
     el.textContent = '✗ Error en la página: ' + (e.message || 'error desconocido') + ' (línea ' + e.lineno + ')';
-    el.className = 'sync-status err';
   }
 });
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Promesa rechazada sin capturar:', e.reason);
-  const el = document.getElementById('syncStatus');
+  const el = document.getElementById('globalErrorBanner');
   if(el){
     const msg = (e.reason && e.reason.message) ? e.reason.message : String(e.reason);
-    el.textContent = '✗ Fallo de red o permiso al sincronizar: ' + msg;
-    el.className = 'sync-status err';
+    el.style.display = 'block';
+    el.textContent = '✗ Fallo inesperado: ' + msg;
   }
 });
 DATA.forEach(it => byId[it.id] = it);
@@ -832,9 +824,6 @@ let quienNombre = '';
 let extraItems = [];      // items agregados manualmente por el equipo
 let flaggedPhotos = {};   // itemId -> {quien, ts}
 let photoOverrides = {};  // itemId -> foto base64 tomada con camara
-let syncOverlay = {};     // itemId -> campos actualizados por la ultima sincronizacion
-let syncNewItems = [];    // items que aparecieron en la hoja y no existian localmente
-let lastSyncInfo = null;  // {ts, updated, added}
 let users = [];           // [{name, pin, role, departamentoId}]
 let departamentos = [];   // [{id, nombre}]
 let itemOverrides = {};   // itemId -> {producto, specs, area, codigos} editados manualmente
@@ -842,21 +831,6 @@ let deletedItemIds = {};  // itemId -> true (eliminado por el equipo)
 let hotelAreas = ['GRIL/ BEACH BAR/HELADERIA','Buffet','MAIN POOL & GARDEN','PRESTIGE BAR','STAFF CANTEEN','Operacion Habitaciones'];
 let orderCounter = 0;
 let currentUser = null;   // {name, pin} de la persona identificada en este dispositivo/sesion
-
-function applySyncData(){
-  // aplicar overlay de sync sobre los items existentes (conserva foto y el resto de campos)
-  Object.keys(syncOverlay).forEach(id => {
-    const it = byId[id];
-    if(it) Object.assign(it, syncOverlay[id]);
-  });
-  // agregar items nuevos detectados por sync que aun no esten en DATA
-  syncNewItems.forEach(ni => {
-    if(!byId[ni.id]){
-      DATA.push(ni);
-      byId[ni.id] = ni;
-    }
-  });
-}
 
 function applyLocalOverrides(){
   // aplicar ediciones manuales (nombre/specs/area/codigos) guardadas por el equipo
@@ -920,21 +894,8 @@ async function loadState(){
     stockState = {}; movements = []; extraItems = []; flaggedPhotos = {};
     photoOverrides = {}; users = []; departamentos = []; itemOverrides = {}; deletedItemIds = {}; orderCounter = 0;
   }
-  try{
-    const r6 = await window.storage.get('sync_overlay', true);
-    syncOverlay = r6 ? JSON.parse(r6.value) : {};
-  }catch(e){ syncOverlay = {}; }
-  try{
-    const r7 = await window.storage.get('sync_new_items', true);
-    syncNewItems = r7 ? JSON.parse(r7.value) : [];
-  }catch(e){ syncNewItems = []; }
-  try{
-    const r8 = await window.storage.get('last_sync_info', true);
-    lastSyncInfo = r8 ? JSON.parse(r8.value) : null;
-  }catch(e){ lastSyncInfo = null; }
   // registrar items nuevos en byId por si aun no estaban
   extraItems.forEach(it => byId[it.id] = it);
-  applySyncData();
   applyLocalOverrides();
 }
 let lastSaveError = '';
@@ -1672,21 +1633,9 @@ async function ejecutarReinicioInventario(){
     alert('✗ ' + (lastSaveError || t('errorGuardarGenerico')));
     return;
   }
-  // Critico: limpiar tambien el overlay/items nuevos de la sincronizacion con
-  // Google Sheets. Si no se hace esto, al pulsar "Sync" mas tarde los ~1871
-  // articulos del inventario anterior volverian a aparecer como "nuevos".
-  syncOverlay = {};
-  syncNewItems = [];
-  lastSyncInfo = null;
-  try{
-    await window.storage.set('sync_overlay', JSON.stringify(syncOverlay), true);
-    await window.storage.set('sync_new_items', JSON.stringify(syncNewItems), true);
-    await window.storage.set('last_sync_info', JSON.stringify(lastSyncInfo), true);
-  }catch(e){ console.error('No se pudo limpiar el estado de sincronizacion', e); }
   sesionArticulosAgregados = 0;
   limpiarBusquedaPorFoto();
   renderHist();
-  renderSyncStatus();
   alert(t('reinicioOk'));
 }
 
@@ -2382,172 +2331,7 @@ onlyMoved.addEventListener('change', render);
 onlyInferred.addEventListener('change', render);
 onlySinDato.addEventListener('change', render);
 
-// ===================== SYNC con la hoja publicada =====================
-const SYNC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRs72NgdBdW5CwmWFE4DVbG_0mnH8-rRdU0z17hO7er0TgMnpdJIPY-N6mvQTdRnjDHhMiLOf6GW35d/pub?gid=1084534792&single=true&output=csv";
-
-// MD5 minimo (algoritmo publico, RFC 1321) para generar los mismos IDs estables que el dataset original
-function md5(str){
-  function rl(n,c){return (n<<c)|(n>>>(32-c));}
-  function ad(a,b){const lo=(a&0xffff)+(b&0xffff);const hi=(a>>16)+(b>>16)+(lo>>16);return (hi<<16)|(lo&0xffff);}
-  function cmn(q,a,b,x,s,t){return ad(rl(ad(ad(a,q),ad(x,t)),s),b);}
-  function ff(a,b,c,d,x,s,t){return cmn((b&c)|(~b&d),a,b,x,s,t);}
-  function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&~d),a,b,x,s,t);}
-  function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t);}
-  function ii(a,b,c,d,x,s,t){return cmn(c^(b|~d),a,b,x,s,t);}
-  function toWords(s){
-    const n=s.length; const words=[];
-    for(let i=0;i<n*8;i+=8) words[i>>5] |= (s.charCodeAt(i/8)&0xff) << (i%32);
-    return words;
-  }
-  const utf8 = unescape(encodeURIComponent(str));
-  let x = toWords(utf8);
-  const len = utf8.length*8;
-  x[len>>5] |= 0x80 << (len%32);
-  x[(((len+64)>>>9)<<4)+14] = len;
-  let a=1732584193,b=-271733879,c=-1732584194,d=271733878;
-  for(let i=0;i<x.length;i+=16){
-    const oa=a,ob=b,oc=c,od=d;
-    a=ff(a,b,c,d,x[i+0],7,-680876936); d=ff(d,a,b,c,x[i+1],12,-389564586); c=ff(c,d,a,b,x[i+2],17,606105819); b=ff(b,c,d,a,x[i+3],22,-1044525330);
-    a=ff(a,b,c,d,x[i+4],7,-176418897); d=ff(d,a,b,c,x[i+5],12,1200080426); c=ff(c,d,a,b,x[i+6],17,-1473231341); b=ff(b,c,d,a,x[i+7],22,-45705983);
-    a=ff(a,b,c,d,x[i+8],7,1770035416); d=ff(d,a,b,c,x[i+9],12,-1958414417); c=ff(c,d,a,b,x[i+10],17,-42063); b=ff(b,c,d,a,x[i+11],22,-1990404162);
-    a=ff(a,b,c,d,x[i+12],7,1804603682); d=ff(d,a,b,c,x[i+13],12,-40341101); c=ff(c,d,a,b,x[i+14],17,-1502002290); b=ff(b,c,d,a,x[i+15],22,1236535329);
-    a=gg(a,b,c,d,x[i+1],5,-165796510); d=gg(d,a,b,c,x[i+6],9,-1069501632); c=gg(c,d,a,b,x[i+11],14,643717713); b=gg(b,c,d,a,x[i+0],20,-373897302);
-    a=gg(a,b,c,d,x[i+5],5,-701558691); d=gg(d,a,b,c,x[i+10],9,38016083); c=gg(c,d,a,b,x[i+15],14,-660478335); b=gg(b,c,d,a,x[i+4],20,-405537848);
-    a=gg(a,b,c,d,x[i+9],5,568446438); d=gg(d,a,b,c,x[i+14],9,-1019803690); c=gg(c,d,a,b,x[i+3],14,-187363961); b=gg(b,c,d,a,x[i+8],20,1163531501);
-    a=gg(a,b,c,d,x[i+13],5,-1444681467); d=gg(d,a,b,c,x[i+2],9,-51403784); c=gg(c,d,a,b,x[i+7],14,1735328473); b=gg(b,c,d,a,x[i+12],20,-1926607734);
-    a=hh(a,b,c,d,x[i+5],4,-378558); d=hh(d,a,b,c,x[i+8],11,-2022574463); c=hh(c,d,a,b,x[i+11],16,1839030562); b=hh(b,c,d,a,x[i+14],23,-35309556);
-    a=hh(a,b,c,d,x[i+1],4,-1530992060); d=hh(d,a,b,c,x[i+4],11,1272893353); c=hh(c,d,a,b,x[i+7],16,-155497632); b=hh(b,c,d,a,x[i+10],23,-1094730640);
-    a=hh(a,b,c,d,x[i+13],4,681279174); d=hh(d,a,b,c,x[i+0],11,-358537222); c=hh(c,d,a,b,x[i+3],16,-722521979); b=hh(b,c,d,a,x[i+6],23,76029189);
-    a=hh(a,b,c,d,x[i+9],4,-640364487); d=hh(d,a,b,c,x[i+12],11,-421815835); c=hh(c,d,a,b,x[i+15],16,530742520); b=hh(b,c,d,a,x[i+2],23,-995338651);
-    a=ii(a,b,c,d,x[i+0],6,-198630844); d=ii(d,a,b,c,x[i+7],10,1126891415); c=ii(c,d,a,b,x[i+14],15,-1416354905); b=ii(b,c,d,a,x[i+5],21,-57434055);
-    a=ii(a,b,c,d,x[i+12],6,1700485571); d=ii(d,a,b,c,x[i+3],10,-1894986606); c=ii(c,d,a,b,x[i+10],15,-1051523); b=ii(b,c,d,a,x[i+1],21,-2054922799);
-    a=ii(a,b,c,d,x[i+8],6,1873313359); d=ii(d,a,b,c,x[i+15],10,-30611744); c=ii(c,d,a,b,x[i+6],15,-1560198380); b=ii(b,c,d,a,x[i+13],21,1309151649);
-    a=ii(a,b,c,d,x[i+4],6,-145523070); d=ii(d,a,b,c,x[i+11],10,-1120210379); c=ii(c,d,a,b,x[i+2],15,718787259); b=ii(b,c,d,a,x[i+9],21,-343485551);
-    a=ad(a,oa); b=ad(b,ob); c=ad(c,oc); d=ad(d,od);
-  }
-  function toHex(n){
-    let s='';
-    for(let i=0;i<4;i++) s += ((n>>(i*8))&0xff).toString(16).padStart(2,'0');
-    return s;
-  }
-  return toHex(a)+toHex(b)+toHex(c)+toHex(d);
-}
-function stableIdJS(area, codigos, producto, specs){
-  const raw = [area.trim().toLowerCase(), codigos.trim().toLowerCase(), (producto||'').trim().toLowerCase(), (specs||'').trim().toLowerCase()].join('|');
-  return 'it_' + md5(raw).substring(0,14);
-}
-
-// Parser CSV tolerante a comillas, comas y saltos de linea dentro de celdas (RFC4180)
-function parseCSV(text){
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  for(let i=0;i<text.length;i++){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else {
-      if(c === '"') inQuotes = true;
-      else if(c === ','){ row.push(field); field=''; }
-      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else if(c === '\r'){ /* ignorar */ }
-      else field += c;
-    }
-  }
-  if(field.length || row.length){ row.push(field); rows.push(row); }
-  return rows;
-}
-
-function normHeader(h){ return (h||'').replace(/\s+/g,' ').trim().toLowerCase(); }
-function parseNum(v){
-  if(v === undefined || v === null || v === '') return null;
-  const n = parseFloat(String(v).replace(/,/g,'').trim());
-  return isNaN(n) ? null : n;
-}
-
-function consolidateSyncRows(rows){
-  if(rows.length < 2) return [];
-  const header = rows[0].map(normHeader);
-  const idx = {};
-  header.forEach((h,i) => {
-    if(h === 'no') idx.area = i;
-    else if(h === 'client code') idx.codigo = i;
-    else if(h === 'product name') idx.producto = i;
-    else if(h === 'tech specs') idx.specs = i;
-    else if(h.startsWith('qty requerida')) idx.qtyReq = i;
-    else if(h.startsWith('stock actual en almacen 3')) idx.a3 = i;
-    else if(h.startsWith('stock actual en almacen 1')) idx.a1 = i;
-    else if(h === 'salidas a&b') idx.salAB = i;
-    else if(h === 'salidas kitchen') idx.salK = i;
-    else if(h === 'salidas hk') idx.salHK = i;
-    else if(h === 'salidas economato') idx.salEco = i;
-    else if(h === 'stock total') idx.stockTotal = i;
-  });
-  if(idx.area === undefined || idx.codigo === undefined) return null; // cabeceras no reconocidas
-
-  const groups = {}; // key -> acumulado
-  for(let r=1;r<rows.length;r++){
-    const row = rows[r];
-    const area = (row[idx.area]||'').trim();
-    const codigo = (row[idx.codigo]||'').trim();
-    if(!area || !codigo) continue;
-    const producto = (row[idx.producto]||'').trim();
-    const specs = (row[idx.specs]||'').trim();
-    const key = area.toLowerCase() + '|' + producto.toLowerCase() + ' | ' + specs.toLowerCase();
-
-    const a3 = idx.a3!==undefined ? parseNum(row[idx.a3]) : null;
-    const a1 = idx.a1!==undefined ? parseNum(row[idx.a1]) : null;
-    const salAB = idx.salAB!==undefined ? (parseNum(row[idx.salAB])||0) : 0;
-    const salK = idx.salK!==undefined ? (parseNum(row[idx.salK])||0) : 0;
-    const salHK = idx.salHK!==undefined ? (parseNum(row[idx.salHK])||0) : 0;
-    const salEco = idx.salEco!==undefined ? (parseNum(row[idx.salEco])||0) : 0;
-    const qtyReq = idx.qtyReq!==undefined ? parseNum(row[idx.qtyReq]) : null;
-    const sinDato = (a3===null && a1===null);
-
-    if(!groups[key]){
-      groups[key] = { area, producto, specs, codigos: new Set(), a3sum:0, a1sum:0,
-        salidasSum:0, qtyReqSum:0, sinDatoAll:true };
-    }
-    const g = groups[key];
-    g.codigos.add(codigo);
-    if(a3!==null){ g.a3sum += a3; }
-    if(a1!==null){ g.a1sum += a1; }
-    g.salidasSum += (salAB+salK+salHK+salEco);
-    if(qtyReq!==null) g.qtyReqSum += qtyReq;
-    if(!sinDato) g.sinDatoAll = false;
-  }
-
-  const result = [];
-  Object.values(groups).forEach(g => {
-    const codigosStr = Array.from(g.codigos).sort().join(' + ');
-    const numCodigos = g.codigos.size;
-    // Disponible = solo stock fisico en almacen (Almacen3 + Almacen1). "Stock Total" de la hoja
-    // ya incluye lo que esta en puntos de venta, por eso NO se usa como base ni se le resta salidas.
-    const disponible = g.sinDatoAll ? null : (g.a3sum + g.a1sum);
-    result.push({
-      id: stableIdJS(g.area, codigosStr, g.producto, g.specs),
-      area: g.area, codigos: codigosStr, producto: g.producto, specs: g.specs,
-      qtyReq: g.qtyReqSum || null,
-      stockAlmacen3: g.sinDatoAll ? null : g.a3sum,
-      stockAlmacen1: g.sinDatoAll ? null : g.a1sum,
-      stockTotal: null,
-      salidasPrevias: g.sinDatoAll ? null : g.salidasSum,
-      disponibleInicial: disponible!==null ? Math.round(disponible*100)/100 : null,
-      sinDatoStock: g.sinDatoAll,
-      fusionado: numCodigos>1,
-      nombreInferido: false,
-      img: null
-    });
-  });
-  return result;
-}
-
-const btnSync = document.getElementById('btnSync');
-const syncStatus = document.getElementById('syncStatus');
+document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
 
 document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
 
@@ -2576,76 +2360,6 @@ btnToggleFilters.addEventListener('click', () => {
   filterRow.classList.toggle('show');
   document.getElementById('filterRowTools').classList.toggle('show');
 });
-
-
-function renderSyncStatus(){
-  if(!lastSyncInfo){ syncStatus.textContent = t('noSyncTodavia'); syncStatus.className='sync-status'; return; }
-  const d = new Date(lastSyncInfo.ts);
-  syncStatus.textContent = `${t('ultimaSync')} ${d.toLocaleString('es-ES')} — ${lastSyncInfo.updated} ${t('actualizados')}, ${lastSyncInfo.added} ${t('nuevos')}`;
-  syncStatus.className = 'sync-status ok';
-}
-
-btnSync.addEventListener('click', async () => {
-  const ok0 = await confirmarPersonalizado(t('confirmSyncTraeViejos'));
-  if(!ok0) return;
-  btnSync.disabled = true;
-  btnSync.textContent = '🔄 Sincronizando...';
-  syncStatus.textContent = 'Descargando datos de la hoja...';
-  syncStatus.className = 'sync-status';
-  try{
-    const res = await fetch(SYNC_URL + (SYNC_URL.includes('?')?'&':'?') + '_ts=' + Date.now());
-    if(!res.ok) throw new Error('La hoja respondió con error ' + res.status + '. Verifica que el enlace de publicación siga activo.');
-    const text = await res.text();
-    const rows = parseCSV(text);
-    const fresh = consolidateSyncRows(rows);
-    if(fresh === null) throw new Error('No reconozco las columnas de esta hoja. Puede que la estructura haya cambiado.');
-    if(fresh.length === 0) throw new Error('La hoja no devolvió filas con datos.');
-
-    await loadState();
-    let updated = 0, added = 0;
-    const newOverlay = {};
-    const newItemsList = [];
-    fresh.forEach(fi => {
-      const existing = byId[fi.id];
-      const fields = {
-        qtyReq: fi.qtyReq, stockAlmacen3: fi.stockAlmacen3, stockAlmacen1: fi.stockAlmacen1,
-        stockTotal: fi.stockTotal, salidasPrevias: fi.salidasPrevias,
-        disponibleInicial: fi.disponibleInicial, sinDatoStock: fi.sinDatoStock, fusionado: fi.fusionado
-      };
-      if(existing){
-        newOverlay[fi.id] = fields;
-        updated++;
-      } else {
-        newItemsList.push(fi);
-        added++;
-      }
-    });
-
-    // conservar overlays/items nuevos previos, agregando/actualizando con lo nuevo
-    syncOverlay = Object.assign({}, syncOverlay, newOverlay);
-    const existingNewIds = new Set(syncNewItems.map(i=>i.id));
-    newItemsList.forEach(ni => { if(!existingNewIds.has(ni.id)) syncNewItems.push(ni); });
-
-    applySyncData();
-
-    lastSyncInfo = { ts: new Date().toISOString(), updated, added };
-    await window.storage.set('sync_overlay', JSON.stringify(syncOverlay), true);
-    await window.storage.set('sync_new_items', JSON.stringify(syncNewItems), true);
-    await window.storage.set('last_sync_info', JSON.stringify(lastSyncInfo), true);
-
-    render();
-    renderHist();
-    renderSyncStatus();
-  }catch(err){
-    console.error(err);
-    syncStatus.textContent = '✗ ' + err.message;
-    syncStatus.className = 'sync-status err';
-  }finally{
-    btnSync.disabled = false;
-    btnSync.textContent = '🔄 Sync';
-  }
-});
-
 /* ============ RBAC ============ */
 const ROLES = {
   MASTER: 'MASTER',
@@ -2819,7 +2533,6 @@ document.getElementById('exportConfirm').addEventListener('click', async () => {
   await loadState();
   render();
   renderHist();
-  renderSyncStatus();
   aplicarVisibilidadRBAC();
   applyLang(currentLang);
 })();
