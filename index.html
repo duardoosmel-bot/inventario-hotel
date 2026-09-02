@@ -139,7 +139,7 @@
   .hdr-tabs::-webkit-scrollbar{display:none;}
   .hdr-tabs .tabbtn{padding:7px 10px;font-size:12px;white-space:nowrap;flex-shrink:0;min-height:34px;}
   .hdr-more-wrap{position:relative;flex-shrink:0;}
-  .hdr-more-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(43,36,29,.18);z-index:60;min-width:170px;overflow:hidden;}
+  .hdr-more-menu{display:none;position:fixed;background:#fff;border:1.5px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(43,36,29,.18);z-index:9999;min-width:170px;overflow:hidden;}
   .hdr-more-menu.show{display:block;}
   .hdr-more-menu button{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:#fff;font-family:Arial,sans-serif;font-size:12.5px;cursor:pointer;color:var(--ink);border-bottom:1px solid var(--line);min-height:40px;touch-action:manipulation;}
   .hdr-more-menu button:last-child{border-bottom:none;}
@@ -418,6 +418,31 @@
   </div>
 </div>
 
+<div class="overlay" id="overlayConfirm">
+  <div class="modal">
+    <h2 id="confirmTitulo">⚠️</h2>
+    <p class="m-specs" id="confirmMsg"></p>
+    <div class="actions">
+      <button class="btn btn-secondary" id="confirmCancelar" data-i18n="cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="confirmAceptar" data-i18n="entrar">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlayResetConfirm">
+  <div class="modal">
+    <h2 data-i18n="btnReiniciarInventario">🧹 Reiniciar inventario</h2>
+    <p class="m-specs" data-i18n="confirmReiniciarInventario1">Esto va a BORRAR todos los artículos, fotos y el stock actual del inventario, dejándolo en blanco. El historial de movimientos anterior se conserva como consulta, igual que usuarios y departamentos. Esta acción no se puede deshacer.</p>
+    <label data-i18n="lblEscribeBorrar">Escribe BORRAR para confirmar</label>
+    <input type="text" id="resetConfirmInput" placeholder="BORRAR">
+    <div class="err" id="resetConfirmErr"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="resetConfirmCancel" data-i18n="cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="resetConfirmNext" data-i18n="btnContinuar">Continuar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlayAdd">
   <div class="modal">
     <h2 data-i18n="addModalTitulo">Agregar artículo nuevo</h2>
@@ -571,6 +596,7 @@ const I18N = {
     confirmReiniciarInventario2: 'Confirmación final: se va a vaciar el inventario ahora mismo. ¿Seguro que quieres continuar?',
     reinicioOk: '✓ Inventario reiniciado. Ya puedes empezar a agregar artículos desde cero.',
     confirmSyncTraeViejos: '⚠ Esto descarga los datos de la hoja de Google Sheets conectada. Si esa hoja todavía tiene el inventario anterior, sus artículos volverán a aparecer aquí. ¿Seguro que quieres sincronizar?',
+    lblEscribeBorrar: 'Escribe BORRAR para confirmar', btnContinuar: 'Continuar', errEscribeBorrar: 'Escribe la palabra BORRAR (en mayúsculas) para confirmar.',
     articulosAgregadosSesion: 'artículo(s) agregado(s) en esta sesión',
     btnLeerEtiquetaCompleta: '📛 Leer etiqueta completa', leyendoEtiqueta: 'Leyendo el texto de la etiqueta (puede tardar unos segundos)...',
     etiquetaSinCoincidencias: 'No se encontró ningún artículo que coincida con el texto de la etiqueta.',
@@ -653,6 +679,7 @@ const I18N = {
     confirmReiniciarInventario2: 'Final confirmation: the inventory will be wiped right now. Are you sure you want to continue?',
     reinicioOk: '✓ Inventory reset. You can now start adding items from scratch.',
     confirmSyncTraeViejos: '⚠ This downloads data from the connected Google Sheet. If that sheet still has the old inventory, its items will reappear here. Are you sure you want to sync?',
+    lblEscribeBorrar: 'Type DELETE to confirm', btnContinuar: 'Continue', errEscribeBorrar: 'Type the word DELETE (in capitals) to confirm.',
     articulosAgregadosSesion: 'item(s) added this session',
     btnLeerEtiquetaCompleta: '📛 Read full label', leyendoEtiqueta: 'Reading the label text (this can take a few seconds)...',
     etiquetaSinCoincidencias: 'No item matched the label text.',
@@ -735,6 +762,7 @@ const I18N = {
     confirmReiniciarInventario2: 'Uthibitisho wa mwisho: hisa itafutwa sasa hivi. Una uhakika unataka kuendelea?',
     reinicioOk: '✓ Hisa imeanzishwa upya. Sasa unaweza kuanza kuongeza bidhaa kutoka mwanzo.',
     confirmSyncTraeViejos: '⚠ Hii inapakua data kutoka Google Sheet iliyounganishwa. Kama karatasi hiyo bado ina hisa ya zamani, bidhaa zake zitaonekana tena hapa. Una uhakika unataka kusawazisha?',
+    lblEscribeBorrar: 'Andika FUTA kuthibitisha', btnContinuar: 'Endelea', errEscribeBorrar: 'Andika neno FUTA (herufi kubwa) kuthibitisha.',
     articulosAgregadosSesion: 'bidhaa zilizoongezwa katika kikao hiki',
     btnLeerEtiquetaCompleta: '📛 Soma lebo yote', leyendoEtiqueta: 'Inasoma maandishi ya lebo (inaweza kuchukua sekunde chache)...',
     etiquetaSinCoincidencias: 'Hakuna bidhaa iliyolingana na maandishi ya lebo.',
@@ -1342,7 +1370,8 @@ mDeleteItem.addEventListener('click', async () => {
   if(!can('productCRUD')){ alert(t('sinPermisoEditar')); return; }
   const it = byId[currentItemId];
   if(!it) return;
-  if(!confirm(t('confirmEliminarArticulo').replace('{n}', it.producto || it.codigos))) return;
+  const ok1 = await confirmarPersonalizado(t('confirmEliminarArticulo').replace('{n}', it.producto || it.codigos));
+  if(!ok1) return;
   await loadState();
   deletedItemIds[currentItemId] = true;
   const ok = await saveState();
@@ -1546,6 +1575,26 @@ btnUnlockCount.addEventListener('click', () => {
 document.getElementById('pinCancel').addEventListener('click', () => overlayPin.classList.remove('show'));
 overlayPin.addEventListener('click', e => { if(e.target === overlayPin) overlayPin.classList.remove('show'); });
 
+// ===== Confirmacion propia (algunos navegadores/tablets bloquean confirm() nativo,
+// sobre todo cuando la app esta "instalada" como acceso directo) =====
+const overlayConfirm = document.getElementById('overlayConfirm');
+const confirmMsg = document.getElementById('confirmMsg');
+let confirmResolve = null;
+function confirmarPersonalizado(mensaje){
+  return new Promise(resolve => {
+    confirmMsg.textContent = mensaje;
+    confirmResolve = resolve;
+    overlayConfirm.classList.add('show');
+  });
+}
+function resolverConfirm(valor){
+  overlayConfirm.classList.remove('show');
+  if(confirmResolve){ confirmResolve(valor); confirmResolve = null; }
+}
+document.getElementById('confirmAceptar').addEventListener('click', () => resolverConfirm(true));
+document.getElementById('confirmCancelar').addEventListener('click', () => resolverConfirm(false));
+overlayConfirm.addEventListener('click', e => { if(e.target === overlayConfirm) resolverConfirm(false); });
+
 function tryUnlock(){
   if(pinInput.value.trim() === '3076'){
     overlayPin.classList.remove('show');
@@ -1572,10 +1621,28 @@ pinInput.addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); }
 // Deja el catalogo de articulos, stock y fotos en blanco. Conserva usuarios,
 // departamentos y el historial de movimientos como registro.
 const btnReiniciarInventario = document.getElementById('btnReiniciarInventario');
+const overlayResetConfirm = document.getElementById('overlayResetConfirm');
+const resetConfirmInput = document.getElementById('resetConfirmInput');
+const resetConfirmErr = document.getElementById('resetConfirmErr');
+
 btnReiniciarInventario.addEventListener('click', () => {
   if(!can('userCRUD')){ alert(t('sinPermisoReiniciar')); return; }
-  if(!confirm(t('confirmReiniciarInventario1'))) return;
-  if(!confirm(t('confirmReiniciarInventario2'))) return;
+  resetConfirmInput.value = '';
+  resetConfirmErr.style.display = 'none';
+  overlayResetConfirm.classList.add('show');
+  setTimeout(() => resetConfirmInput.focus(), 100);
+});
+document.getElementById('resetConfirmCancel').addEventListener('click', () => overlayResetConfirm.classList.remove('show'));
+overlayResetConfirm.addEventListener('click', e => { if(e.target === overlayResetConfirm) overlayResetConfirm.classList.remove('show'); });
+
+document.getElementById('resetConfirmNext').addEventListener('click', () => {
+  const palabra = resetConfirmInput.value.trim().toUpperCase();
+  if(palabra !== 'BORRAR' && palabra !== 'DELETE' && palabra !== 'FUTA'){
+    resetConfirmErr.textContent = t('errEscribeBorrar');
+    resetConfirmErr.style.display = 'block';
+    return;
+  }
+  overlayResetConfirm.classList.remove('show');
   pinPurpose = 'reset';
   pinInput.value = '';
   pinErr.style.display = 'none';
@@ -2467,7 +2534,21 @@ document.getElementById('langSelect').addEventListener('change', (e) => applyLan
 
 const btnMoreMenu = document.getElementById('btnMoreMenu');
 const moreMenu = document.getElementById('moreMenu');
-btnMoreMenu.addEventListener('click', (e) => { e.stopPropagation(); moreMenu.classList.toggle('show'); });
+function posicionarMoreMenu(){
+  const r = btnMoreMenu.getBoundingClientRect();
+  moreMenu.style.top = (r.bottom + 4) + 'px';
+  let left = r.right - moreMenu.offsetWidth;
+  if(left < 8) left = 8;
+  moreMenu.style.left = left + 'px';
+}
+btnMoreMenu.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const abrir = !moreMenu.classList.contains('show');
+  moreMenu.classList.toggle('show', abrir);
+  if(abrir) posicionarMoreMenu();
+});
+window.addEventListener('resize', () => { if(moreMenu.classList.contains('show')) posicionarMoreMenu(); });
+window.addEventListener('scroll', () => { if(moreMenu.classList.contains('show')) posicionarMoreMenu(); }, true);
 document.addEventListener('click', (e) => { if(!moreMenu.contains(e.target) && e.target !== btnMoreMenu) moreMenu.classList.remove('show'); });
 moreMenu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => moreMenu.classList.remove('show')));
 
@@ -2486,7 +2567,8 @@ function renderSyncStatus(){
 }
 
 btnSync.addEventListener('click', async () => {
-  if(!confirm(t('confirmSyncTraeViejos'))) return;
+  const ok0 = await confirmarPersonalizado(t('confirmSyncTraeViejos'));
+  if(!ok0) return;
   btnSync.disabled = true;
   btnSync.textContent = '🔄 Sincronizando...';
   syncStatus.textContent = 'Descargando datos de la hoja...';
@@ -2627,87 +2709,4 @@ function filtrarPedidosPorRol(pedidos){
 /* ============ FIN RBAC ============ */
 
 // ===================== Exportación a Excel =====================
-function fmtDateInput(d){
-  return d.toISOString().slice(0,10);
-}
-function setExportRange(dias){
-  const hasta = new Date();
-  const desde = new Date();
-  desde.setDate(desde.getDate() - dias);
-  document.getElementById('exportDesde').value = fmtDateInput(desde);
-  document.getElementById('exportHasta').value = fmtDateInput(hasta);
-}
-document.getElementById('presetBtn7').addEventListener('click', () => setExportRange(7));
-document.getElementById('presetBtn15').addEventListener('click', () => setExportRange(15));
-document.getElementById('presetBtn30').addEventListener('click', () => setExportRange(30));
-
-document.getElementById('exportConfirm').addEventListener('click', () => {
-  const errEl = document.getElementById('exportErr');
-  errEl.style.display = 'none';
-  if(!can('exportar')){ errEl.textContent = 'Tu rol no tiene permiso de exportación.'; errEl.style.display='block'; return; }
-  if(typeof XLSX === 'undefined'){ errEl.textContent = 'No se pudo cargar el motor de Excel (revisa tu conexión).'; errEl.style.display='block'; return; }
-
-  const desdeStr = document.getElementById('exportDesde').value.trim();
-  const hastaStr = document.getElementById('exportHasta').value.trim();
-  if(!desdeStr || !hastaStr){ errEl.textContent = 'Indica el rango de fechas o usa un preset.'; errEl.style.display='block'; return; }
-  const desde = new Date(desdeStr + 'T00:00:00');
-  const hasta = new Date(hastaStr + 'T23:59:59');
-  if(isNaN(desde) || isNaN(hasta) || desde > hasta){ errEl.textContent = 'Rango de fechas inválido.'; errEl.style.display='block'; return; }
-
-  // Hoja 1: inventario actual
-  const inventario = allItems().map(it => ({
-    Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
-    Disponible_actual: disponibleDe(it), Stock_inicial: it.stockAlmacen3 ?? '', Sin_dato: it.sinDatoStock ? 'Sí' : 'No'
-  }));
-
-  // Hoja 2: movimientos del periodo
-  const movsPeriodo = movements.filter(m => {
-    const t = new Date(m.ts);
-    return t >= desde && t <= hasta;
-  });
-  const movimientosSheet = movsPeriodo.map(m => ({
-    Fecha: new Date(m.ts).toLocaleString('es-ES'), Quien: m.quien || '', Tipo: m.tipo,
-    Producto: m.producto || '', Codigo: m.codigos || '', Origen: m.area || '',
-    Destino: m.destino || '', Cantidad: m.cantidad ?? '', Disponible_resultante: m.disponibleResultante ?? '',
-    Estado: m.estado || '', Departamento: m.departamentoId ? nombreDepto(m.departamentoId) : ''
-  }));
-
-  // Hoja 3: estado de stock por artículo (entradas/salidas/ajustes del periodo)
-  const estadoStock = allItems().map(it => {
-    const movsIt = movsPeriodo.filter(m => m.itemId === it.id);
-    let entradas=0, salidas=0;
-    movsIt.forEach(m => {
-      if(m.tipo === 'entrada') entradas += (m.cantidad||0);
-      else if(m.tipo === 'salida' || (m.tipo==='pedido' && m.estado==='aprobado')) salidas += (m.cantidad||0);
-    });
-    return {
-      Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
-      Entradas_periodo: entradas, Salidas_periodo: salidas, Disponible_actual: disponibleDe(it)
-    };
-  });
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventario), 'Inventario actual');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimientosSheet), 'Movimientos periodo');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(estadoStock), 'Estado stock');
-  XLSX.writeFile(wb, `reporte_inventario_${desdeStr}_a_${hastaStr}.xlsx`);
-});
-
-(async () => {
-  if(typeof window.storage === 'undefined'){
-    const banner = document.createElement('div');
-    banner.style.cssText = 'background:#b3341c;color:#fff;padding:14px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;text-align:center;position:sticky;top:0;z-index:200;';
-    banner.innerHTML = '⚠️ <b>Este archivo está abierto fuera de Claude</b> — el guardado compartido no funciona así.<br>Ábrelo desde el chat de Claude (la tarjeta del archivo), no desde tu carpeta de descargas.';
-    document.body.insertBefore(banner, document.body.firstChild);
-  }
-  refreshUnlockButton();
-  await loadState();
-  render();
-  renderHist();
-  renderSyncStatus();
-  aplicarVisibilidadRBAC();
-  applyLang(currentLang);
-})();
-</script>
-</body>
-</html>
+fu
