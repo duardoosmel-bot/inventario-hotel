@@ -198,7 +198,7 @@
 <header>
   <div class="hdr-top">
     <h1 data-i18n="appTitle">Inventario Hotel</h1>
-    <span class="hdr-meta" data-i18n="appMeta">1871 items · 34 áreas</span>
+    <span class="hdr-meta" id="hdrMeta"></span>
     <select class="lang-select" id="langSelect">
       <option value="es">🇪🇸 ES</option>
       <option value="en">🇬🇧 EN</option>
@@ -524,7 +524,7 @@ const DATA = [];
 // ===================== Idioma (ES / EN / SW) =====================
 const I18N = {
   es: {
-    appTitle: 'Inventario Hotel', appMeta: '1871 items · 34 áreas',
+    appTitle: 'Inventario Hotel', appMetaTpl: '{n} artículos · {a} áreas',
     tabBuscar: 'Buscador', tabHist: 'Historial', tabPedidos: 'Pedidos', tabUsuarios: 'Usuarios', tabDeptos: 'Deptos',
     btnReconteo: 'Reconteo', btnSync: 'Sync', btnIdentify: '👤 Identificarse', btnFilters: 'Filtros ▾',
     reconteoHint: '🔓 Reconteo activo — filtra por código, nombre o categoría (área) abajo para ubicar cada artículo.',
@@ -607,7 +607,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
   },
   en: {
-    appTitle: 'Hotel Inventory', appMeta: '1871 items · 34 areas',
+    appTitle: 'Hotel Inventory', appMetaTpl: '{n} items · {a} areas',
     tabBuscar: 'Search', tabHist: 'History', tabPedidos: 'Orders', tabUsuarios: 'Users', tabDeptos: 'Depts',
     btnReconteo: 'Recount', btnSync: 'Sync', btnIdentify: '👤 Sign in', btnFilters: 'Filters ▾',
     reconteoHint: '🔓 Recount mode active — filter by code, name or category below to find each item.',
@@ -690,7 +690,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
   },
   sw: {
-    appTitle: 'Bohari ya Hoteli', appMeta: 'bidhaa 1871 · maeneo 34',
+    appTitle: 'Bohari ya Hoteli', appMetaTpl: 'bidhaa {n} · maeneo {a}',
     tabBuscar: 'Tafuta', tabHist: 'Historia', tabPedidos: 'Maombi', tabUsuarios: 'Watumiaji', tabDeptos: 'Idara',
     btnReconteo: 'Hesabu upya', btnSync: 'Sync', btnIdentify: '👤 Ingia', btnFilters: 'Vichujio ▾',
     reconteoHint: '🔓 Hali ya hesabu upya imewashwa — chuja kwa msimbo, jina au kategoria hapa chini kupata kila bidhaa.',
@@ -1061,7 +1061,16 @@ function updateSentinel(){
   }
 }
 
+function actualizarHdrMeta(){
+  const el = document.getElementById('hdrMeta');
+  if(!el) return;
+  const items = allItems();
+  const areas = new Set(items.map(it => it.area).filter(Boolean));
+  el.textContent = t('appMetaTpl').replace('{n}', items.length).replace('{a}', areas.size);
+}
+
 function render(){
+  actualizarHdrMeta();
   const q = search.value.trim().toLowerCase();
   const area = areaFilter.value;
   const fusionOnly = onlyFusion.checked;
