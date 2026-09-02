@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="Inventario Hotel">
 <meta name="theme-color" content="#faf6ef">
 <title>Inventario Hotel — Buscador y Movimientos</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --ink:#2b241d; --paper:#faf6ef; --card:#ffffff; --accent:#a8641f;
@@ -1888,6 +1887,17 @@ function cargarTesseract(){
   });
 }
 
+function cargarXLSX(){
+  return new Promise((resolve, reject) => {
+    if(typeof XLSX !== 'undefined'){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('No se pudo cargar el motor de Excel. Revisa tu conexión.'));
+    document.head.appendChild(s);
+  });
+}
+
 // palabras muy comunes en las etiquetas que no ayudan a buscar (ruido)
 const STOPWORDS_ETIQUETA = new Set(['the','and','for','with','made','material','size','color','from','este','esta','para','con','de','del','la','el','los','las','www','com']);
 
@@ -2709,4 +2719,101 @@ function filtrarPedidosPorRol(pedidos){
 /* ============ FIN RBAC ============ */
 
 // ===================== Exportación a Excel =====================
-fu
+function fmtDateInput(d){
+  return d.toISOString().slice(0,10);
+}
+function setExportRange(dias){
+  const hasta = new Date();
+  const desde = new Date();
+  desde.setDate(desde.getDate() - dias);
+  document.getElementById('exportDesde').value = fmtDateInput(desde);
+  document.getElementById('exportHasta').value = fmtDateInput(hasta);
+}
+document.getElementById('presetBtn7').addEventListener('click', () => setExportRange(7));
+document.getElementById('presetBtn15').addEventListener('click', () => setExportRange(15));
+document.getElementById('presetBtn30').addEventListener('click', () => setExportRange(30));
+
+document.getElementById('exportConfirm').addEventListener('click', async () => {
+  const errEl = document.getElementById('exportErr');
+  errEl.style.display = 'none';
+  if(!can('exportar')){ errEl.textContent = 'Tu rol no tiene permiso de exportación.'; errEl.style.display='block'; return; }
+  const exportBtn = document.getElementById('exportConfirm');
+  exportBtn.disabled = true;
+  const textoOriginal = exportBtn.textContent;
+  exportBtn.textContent = t('procesando');
+  try{
+    await cargarXLSX();
+  }catch(e){
+    errEl.textContent = e.message || 'No se pudo cargar el motor de Excel (revisa tu conexión).';
+    errEl.style.display = 'block';
+    exportBtn.disabled = false;
+    exportBtn.textContent = textoOriginal;
+    return;
+  }
+  exportBtn.disabled = false;
+  exportBtn.textContent = textoOriginal;
+
+  const desdeStr = document.getElementById('exportDesde').value.trim();
+  const hastaStr = document.getElementById('exportHasta').value.trim();
+  if(!desdeStr || !hastaStr){ errEl.textContent = 'Indica el rango de fechas o usa un preset.'; errEl.style.display='block'; return; }
+  const desde = new Date(desdeStr + 'T00:00:00');
+  const hasta = new Date(hastaStr + 'T23:59:59');
+  if(isNaN(desde) || isNaN(hasta) || desde > hasta){ errEl.textContent = 'Rango de fechas inválido.'; errEl.style.display='block'; return; }
+
+  // Hoja 1: inventario actual
+  const inventario = allItems().map(it => ({
+    Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
+    Disponible_actual: disponibleDe(it), Stock_inicial: it.stockAlmacen3 ?? '', Sin_dato: it.sinDatoStock ? 'Sí' : 'No'
+  }));
+
+  // Hoja 2: movimientos del periodo
+  const movsPeriodo = movements.filter(m => {
+    const t = new Date(m.ts);
+    return t >= desde && t <= hasta;
+  });
+  const movimientosSheet = movsPeriodo.map(m => ({
+    Fecha: new Date(m.ts).toLocaleString('es-ES'), Quien: m.quien || '', Tipo: m.tipo,
+    Producto: m.producto || '', Codigo: m.codigos || '', Origen: m.area || '',
+    Destino: m.destino || '', Cantidad: m.cantidad ?? '', Disponible_resultante: m.disponibleResultante ?? '',
+    Estado: m.estado || '', Departamento: m.departamentoId ? nombreDepto(m.departamentoId) : ''
+  }));
+
+  // Hoja 3: estado de stock por artículo (entradas/salidas/ajustes del periodo)
+  const estadoStock = allItems().map(it => {
+    const movsIt = movsPeriodo.filter(m => m.itemId === it.id);
+    let entradas=0, salidas=0;
+    movsIt.forEach(m => {
+      if(m.tipo === 'entrada') entradas += (m.cantidad||0);
+      else if(m.tipo === 'salida' || (m.tipo==='pedido' && m.estado==='aprobado')) salidas += (m.cantidad||0);
+    });
+    return {
+      Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
+      Entradas_periodo: entradas, Salidas_periodo: salidas, Disponible_actual: disponibleDe(it)
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventario), 'Inventario actual');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimientosSheet), 'Movimientos periodo');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(estadoStock), 'Estado stock');
+  XLSX.writeFile(wb, `reporte_inventario_${desdeStr}_a_${hastaStr}.xlsx`);
+});
+
+(async () => {
+  if(typeof window.storage === 'undefined'){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#b3341c;color:#fff;padding:14px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;text-align:center;position:sticky;top:0;z-index:200;';
+    banner.innerHTML = '⚠️ <b>Este archivo está abierto fuera de Claude</b> — el guardado compartido no funciona así.<br>Ábrelo desde el chat de Claude (la tarjeta del archivo), no desde tu carpeta de descargas.';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+  refreshUnlockButton();
+  await loadState();
+  render();
+  renderHist();
+  renderSyncStatus();
+  aplicarVisibilidadRBAC();
+  applyLang(currentLang);
+})();
+</script>
+</body>
+</html>
