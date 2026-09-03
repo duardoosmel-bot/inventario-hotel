@@ -851,6 +851,8 @@ function applyLocalOverrides(){
   }
 }
 
+let lastLoadFailed = false;
+let lastLoadError = '';
 async function loadState(){
   try{
     const r = await window.storage.get('inventory_state', true);
@@ -889,10 +891,19 @@ async function loadState(){
         await saveState();
       }
     }
+    lastLoadFailed = false;
+    lastLoadError = '';
   }catch(e){
-    console.error('Error cargando estado', e);
-    stockState = {}; movements = []; extraItems = []; flaggedPhotos = {};
-    photoOverrides = {}; users = []; departamentos = []; itemOverrides = {}; deletedItemIds = {}; orderCounter = 0;
+    // CRITICO: si falla la lectura (red inestable, timeout, etc.) NO vaciamos
+    // el estado en memoria. Antes esto ponia stockState/extraItems/etc en blanco,
+    // y como casi toda accion hace "cargar -> modificar -> guardar", el siguiente
+    // guardado sobrescribia la nube con ese estado vacio, borrando el inventario
+    // real. Ahora dejamos lo que ya hubiera en memoria intacto, y bloqueamos
+    // cualquier guardado hasta que una carga tenga exito (ver saveState()).
+    console.error('Error cargando estado — se conserva lo que ya habia en memoria', e);
+    lastLoadFailed = true;
+    lastLoadError = (e && e.message) ? e.message : String(e);
+    return;
   }
   // registrar items nuevos en byId por si aun no estaban
   extraItems.forEach(it => byId[it.id] = it);
@@ -900,6 +911,11 @@ async function loadState(){
 }
 let lastSaveError = '';
 async function saveState(){
+  if(lastLoadFailed){
+    lastSaveError = 'No se guardó nada: la última lectura del estado desde la nube falló (' + lastLoadError + '). Para evitar borrar datos por error, no se sobrescribe hasta poder leer correctamente. Revisa tu conexión e inténtalo de nuevo.';
+    console.error(lastSaveError);
+    return false;
+  }
   try{
     const payload = {
       stockState, movements, extraItems, flaggedPhotos, photoOverrides,
@@ -1359,7 +1375,8 @@ mFlagPhoto.addEventListener('click', async () => {
   const quien = mQuien.value.trim() || 'Sin nombre';
   await loadState();
   flaggedPhotos[it.id] = { quien, ts: new Date().toISOString() };
-  await saveState();
+  const ok = await saveState();
+  if(!ok){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
   mFlagPhoto.textContent = t('fotoReportadaOk');
   render();
 });
@@ -1405,7 +1422,13 @@ mCameraInput.addEventListener('change', async (e) => {
     await loadState();
     photoOverrides[it.id] = base64;
     if(flaggedPhotos[it.id]) delete flaggedPhotos[it.id];
-    await saveState();
+    const ok = await saveState();
+    if(!ok){
+      mTakePhoto.textContent = t('errorIntenta');
+      mTakePhoto.disabled = false;
+      alert('✗ ' + (lastSaveError || t('errorGuardarGenerico')));
+      return;
+    }
     renderPhotoPreview(it);
     mFlagPhoto.textContent = t('btnReportarFoto');
     mTakePhoto.textContent = t('fotoActualizada');
@@ -2187,7 +2210,8 @@ function renderHist(){
       const disp = disponibleDe(it);
       stockState[m.itemId] = disp + m.cantidad;
       movements.splice(idx,1);
-      await saveState();
+      const ok = await saveState();
+      if(!ok){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
       render();
       renderHist();
     });
