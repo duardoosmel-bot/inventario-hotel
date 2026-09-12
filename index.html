@@ -2507,4 +2507,396 @@ function renderHist(){
     return `
     <tr>
       <td>${new Date(m.ts).toLocaleString('es-ES')}</td>
-      <td><span class="who-badge${m.pinAdmin?' p
+      <td><span class="who-badge${m.pinAdmin?' pin':''}">${m.pinAdmin?'🔑 ':''}${m.quien||'—'}</span></td>
+      <td>${m.producto}</td>
+      <td>${m.codigos}</td>
+      <td>${m.area}</td>
+      <td>${ordenTxt}→ ${m.destino} ${estadoBadge}</td>
+      <td>${fmtNum(m.cantidad)}</td>
+      <td>${fmtNum(m.disponibleResultante)}</td>
+      <td>${m.tipo!=='pedido' ? `<button class="del-btn" data-idx="${i}">${t('deshacer')}</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<div class="hist-scroll"><table class="hist-table">
+    <thead><tr><th>${t('thFecha')}</th><th>${t('thQuien')}</th><th>${t('thProducto')}</th><th>${t('thCodigo')}</th><th>${t('thOrigen')}</th><th>${t('thDestino')}</th><th>${t('thCant')}</th><th>${t('thDisp')}</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  el.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await loadState();
+      const idx = parseInt(btn.dataset.idx);
+      const m = movements[idx];
+      const it = byId[m.itemId];
+      const disp = disponibleDe(it);
+      stockState[m.itemId] = disp + m.cantidad;
+      movements.splice(idx,1);
+      const ok = await saveState();
+      if(!ok){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
+      render();
+      renderHist();
+    });
+  });
+}
+
+const tabBuscar = document.getElementById('tabBuscar');
+const tabHist = document.getElementById('tabHist');
+const tabPedidos = document.getElementById('tabPedidos');
+const tabUsuarios = document.getElementById('tabUsuarios');
+const tabDeptos = document.getElementById('tabDeptos');
+const tabLog = document.getElementById('tabLog');
+const viewBuscar = document.getElementById('viewBuscar');
+const viewHist = document.getElementById('viewHist');
+const viewPedidos = document.getElementById('viewPedidos');
+const viewUsuarios = document.getElementById('viewUsuarios');
+const viewDeptos = document.getElementById('viewDeptos');
+const viewLog = document.getElementById('viewLog');
+const filterRow = document.getElementById('filterRow');
+
+function nombreDepto(id){
+  const d = departamentos.find(d => d.id === id);
+  return d ? d.nombre : '(sin depto)';
+}
+
+function renderUsuarios(){
+  const el = document.getElementById('usuariosListado');
+  if(!el) return;
+  if(users.length === 0){
+    el.innerHTML = `<div class="hist-empty">${t('noUsuarios')}</div>`;
+    return;
+  }
+  el.innerHTML = '<div class="users-wrap">' +
+    users.map(u => `<span class="user-chip"><span class="ic">👤</span>${u.name} — ${u.role==='DEPARTAMENTO' ? nombreDepto(u.departamentoId) : 'Almacenista'}</span>`).join('') +
+    '</div>';
+}
+
+// ===================== Departamentos (solo MASTER) =====================
+document.getElementById('createDeptoConfirm').addEventListener('click', async () => {
+  const nombre = document.getElementById('newDeptoName').value.trim();
+  const errEl = document.getElementById('createDeptoErr');
+  errEl.style.display = 'none';
+  if(!nombre){ errEl.textContent = 'Indica el nombre del departamento.'; errEl.style.display='block'; return; }
+  if(departamentos.some(d => d.nombre.toLowerCase() === nombre.toLowerCase())){
+    errEl.textContent = 'Ya existe un departamento con ese nombre.'; errEl.style.display='block'; return;
+  }
+  const nuevo = { id: 'dep_' + Date.now().toString(36), nombre };
+  departamentos.push(nuevo);
+  const ok = await saveState();
+  if(!ok){
+    errEl.textContent = '✗ No se pudo guardar: ' + (lastSaveError || 'revisa tu conexión') + '.'; errEl.style.display='block';
+    departamentos.pop();
+    return;
+  }
+  document.getElementById('newDeptoName').value = '';
+  registrarLog('Departamento creado', nombre);
+  renderDeptos();
+  refreshNewUserDeptoField();
+});
+
+function renderDeptos(){
+  const el = document.getElementById('deptosListado');
+  if(!el) return;
+  if(departamentos.length === 0){
+    el.innerHTML = `<div class="hist-empty">${t('noDeptos')}</div>`;
+    return;
+  }
+  el.innerHTML = '<div class="users-wrap">' +
+    departamentos.map(d => `<span class="user-chip"><span class="ic">🏢</span>${d.nombre} <button class="del-btn" data-depto="${d.id}" title="Eliminar">✕</button></span>`).join('') +
+    '</div>';
+  el.querySelectorAll('button[data-depto]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.depto;
+      if(users.some(u => u.departamentoId === id)){
+        alert('No se puede eliminar: hay usuarios asignados a este departamento.');
+        return;
+      }
+      const idx = departamentos.findIndex(d => d.id === id);
+      if(idx === -1) return;
+      const removed = departamentos.splice(idx,1)[0];
+      const ok = await saveState();
+      if(!ok){ departamentos.splice(idx,0,removed); alert('No se pudo guardar la eliminación.'); return; }
+      renderDeptos();
+      refreshNewUserDeptoField();
+    });
+  });
+}
+
+function hideAllViews(){
+  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active'); tabLog.classList.remove('active');
+  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none'; viewLog.style.display='none';
+}
+tabBuscar.addEventListener('click', () => {
+  hideAllViews();
+  tabBuscar.classList.add('active');
+  viewBuscar.style.display='block';
+});
+tabLog.addEventListener('click', async () => {
+  if(!can('verHistorialCompleto')){ alert('Tu rol no tiene acceso al log.'); return; }
+  hideAllViews();
+  tabLog.classList.add('active');
+  viewLog.style.display='block';
+  await cargarLogDesdeNube();
+  renderLog();
+});
+tabHist.addEventListener('click', async () => {
+  if(!can('verHistorialCompleto')){ alert('Tu rol no tiene acceso al historial completo. Consulta tus pedidos en 📋 Pedidos.'); return; }
+  hideAllViews();
+  tabHist.classList.add('active');
+  viewHist.style.display='block';
+  await loadState();
+  renderHist();
+});
+tabPedidos.addEventListener('click', async () => {
+  if(!currentUser){ alert('Debes identificarte primero (botón "👤 Identificarse").'); return; }
+  hideAllViews();
+  tabPedidos.classList.add('active');
+  viewPedidos.style.display='block';
+  document.getElementById('pedidosLockedMsg').style.display='none';
+  await loadState();
+  renderPedidos();
+});
+tabUsuarios.addEventListener('click', async () => {
+  if(!can('userCRUD')){ alert('Solo el administrador (MASTER) puede gestionar usuarios.'); return; }
+  hideAllViews();
+  tabUsuarios.classList.add('active');
+  viewUsuarios.style.display='block';
+  document.getElementById('createUserErr').style.display = 'none';
+  await loadState();
+  renderUsuarios();
+  refreshNewUserDeptoField();
+});
+tabDeptos.addEventListener('click', async () => {
+  if(!can('deptCRUD')){ alert('Solo el administrador (MASTER) puede gestionar departamentos.'); return; }
+  hideAllViews();
+  tabDeptos.classList.add('active');
+  viewDeptos.style.display='block';
+  document.getElementById('createDeptoErr').style.display = 'none';
+  await loadState();
+  renderDeptos();
+});
+
+let searchDebounceId = null;
+search.addEventListener('input', () => {
+  if(photoSearchMatches){ limpiarBusquedaPorFoto(); return; }
+  clearTimeout(searchDebounceId);
+  searchDebounceId = setTimeout(render, 200);
+});
+areaFilter.addEventListener('change', render);
+onlyFusion.addEventListener('change', render);
+onlyMoved.addEventListener('change', render);
+onlyInferred.addEventListener('change', render);
+onlySinDato.addEventListener('change', render);
+
+document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
+
+document.getElementById('modoSelect').value = modoApp;
+document.getElementById('modoSelect').addEventListener('change', (e) => {
+  const nuevo = e.target.value;
+  if(nuevo === modoApp) return;
+  localStorage.setItem('modoApp', nuevo);
+  location.reload();
+});
+
+const btnMoreMenu = document.getElementById('btnMoreMenu');
+const moreMenu = document.getElementById('moreMenu');
+function posicionarMoreMenu(){
+  const r = btnMoreMenu.getBoundingClientRect();
+  moreMenu.style.top = (r.bottom + 4) + 'px';
+  let left = r.right - moreMenu.offsetWidth;
+  if(left < 8) left = 8;
+  moreMenu.style.left = left + 'px';
+}
+btnMoreMenu.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const abrir = !moreMenu.classList.contains('show');
+  moreMenu.classList.toggle('show', abrir);
+  if(abrir) posicionarMoreMenu();
+});
+window.addEventListener('resize', () => { if(moreMenu.classList.contains('show')) posicionarMoreMenu(); });
+window.addEventListener('scroll', () => { if(moreMenu.classList.contains('show')) posicionarMoreMenu(); }, true);
+document.addEventListener('click', (e) => { if(!moreMenu.contains(e.target) && e.target !== btnMoreMenu) moreMenu.classList.remove('show'); });
+moreMenu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => moreMenu.classList.remove('show')));
+
+const btnToggleFilters = document.getElementById('btnToggleFilters');
+btnToggleFilters.addEventListener('click', () => {
+  filterRow.classList.toggle('show');
+  document.getElementById('filterRowTools').classList.toggle('show');
+});
+/* ============ RBAC ============ */
+const ROLES = {
+  MASTER: 'MASTER',
+  DEPARTAMENTO: 'DEPARTAMENTO',
+  ALMACENISTA: 'ALMACENISTA'
+};
+
+const PERMS = {
+  MASTER: {
+    userCRUD: true, deptCRUD: true, productCRUD: true, stockAjusteManual: true,
+    pedidosAprobar: true, verHistorialCompleto: true, exportar: true,
+    editarStockInicial: true, verSoloPropioDepto: false, recalcularStock: true
+  },
+  DEPARTAMENTO: {
+    userCRUD: false, deptCRUD: false, productCRUD: false, stockAjusteManual: false,
+    pedidosAprobar: false, verHistorialCompleto: false, exportar: false,
+    editarStockInicial: false, verSoloPropioDepto: true, recalcularStock: false
+  },
+  ALMACENISTA: {
+    userCRUD: false, deptCRUD: false, productCRUD: true, stockAjusteManual: false,
+    pedidosAprobar: true, verHistorialCompleto: true, exportar: true,
+    editarStockInicial: false, verSoloPropioDepto: false, recalcularStock: true
+  }
+};
+
+function can(perm){
+  const role = (currentUser && currentUser.role) || null;
+  if(!role) return false;
+  return !!PERMS[role][perm];
+}
+
+// ===== Fórmula de stock (nunca sobrescribe stockAlmacen3 = stock_inicial) =====
+// Se usa como verificación/reporte (ver exportación). La app sigue usando stockState
+// como saldo vivo por rendimiento y compatibilidad con los datos ya guardados en la nube;
+// stockAlmacen3 (stock_inicial) solo llega por sync desde Google Sheets, nunca se
+// sobrescribe desde la UI (ver intentarEditarStockInicial).
+function stockActualDe(it){
+  const inicial = it.stockAlmacen3 || 0;
+  const movs = movements.filter(m => m.itemId === it.id);
+  let entradas = 0, salidas = 0, ajustes = 0;
+  movs.forEach(m => {
+    if(m.tipo === 'entrada') entradas += (m.cantidad||0);
+    else if(m.tipo === 'salida' || (m.tipo==='pedido' && m.estado==='aprobado')) salidas += (m.cantidad||0);
+    else if(m.tipo === 'ajuste' || m.tipo === 'conteo') ajustes += 0; // conteo ya fija el saldo directamente, no se suma aparte
+  });
+  return inicial + entradas - salidas + ajustes;
+}
+
+// Bloquea cualquier intento de escribir en stockAlmacen3 fuera de MASTER
+function intentarEditarStockInicial(it, nuevoValor){
+  if(!can('editarStockInicial')){
+    alert('No tienes permiso para modificar el stock inicial (histórico e inmutable).');
+    return false;
+  }
+  it.stockAlmacen3 = nuevoValor;
+  return true;
+}
+
+// ===== Recalcular stock (ALMACENISTA / MASTER) =====
+// "🔁 Recalcular stock" pide el PIN de administrador y, una vez correcto, activa el
+// modo de conteo físico (mismo mecanismo que antes tenía "Reconteo"), para que el
+// almacenista pueda recontar artículo por artículo y actualizar el disponible.
+// La lógica de desbloqueo está más abajo, en btnUnlockCount (reutiliza este botón).
+
+// ===== Visibilidad de UI según rol =====
+function aplicarVisibilidadRBAC(){
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    const perm = el.getAttribute('data-perm');
+    el.style.display = can(perm) ? '' : 'none';
+  });
+}
+
+function filtrarPedidosPorRol(pedidos){
+  if(can('pedidosAprobar')) return pedidos;
+  if(currentUser && currentUser.departamentoId){
+    return pedidos.filter(m => m.departamentoId === currentUser.departamentoId);
+  }
+  return pedidos.filter(m => m.quien === (currentUser && currentUser.name));
+}
+/* ============ FIN RBAC ============ */
+
+// ===================== Exportación a Excel =====================
+function fmtDateInput(d){
+  return d.toISOString().slice(0,10);
+}
+function setExportRange(dias){
+  const hasta = new Date();
+  const desde = new Date();
+  desde.setDate(desde.getDate() - dias);
+  document.getElementById('exportDesde').value = fmtDateInput(desde);
+  document.getElementById('exportHasta').value = fmtDateInput(hasta);
+}
+document.getElementById('presetBtn7').addEventListener('click', () => setExportRange(7));
+document.getElementById('presetBtn15').addEventListener('click', () => setExportRange(15));
+document.getElementById('presetBtn30').addEventListener('click', () => setExportRange(30));
+
+document.getElementById('exportConfirm').addEventListener('click', async () => {
+  const errEl = document.getElementById('exportErr');
+  errEl.style.display = 'none';
+  if(!can('exportar')){ errEl.textContent = 'Tu rol no tiene permiso de exportación.'; errEl.style.display='block'; return; }
+  const exportBtn = document.getElementById('exportConfirm');
+  exportBtn.disabled = true;
+  const textoOriginal = exportBtn.textContent;
+  exportBtn.textContent = t('procesando');
+  try{
+    await cargarXLSX();
+  }catch(e){
+    errEl.textContent = e.message || 'No se pudo cargar el motor de Excel (revisa tu conexión).';
+    errEl.style.display = 'block';
+    exportBtn.disabled = false;
+    exportBtn.textContent = textoOriginal;
+    return;
+  }
+  exportBtn.disabled = false;
+  exportBtn.textContent = textoOriginal;
+
+  const desdeStr = document.getElementById('exportDesde').value.trim();
+  const hastaStr = document.getElementById('exportHasta').value.trim();
+  if(!desdeStr || !hastaStr){ errEl.textContent = 'Indica el rango de fechas o usa un preset.'; errEl.style.display='block'; return; }
+  const desde = new Date(desdeStr + 'T00:00:00');
+  const hasta = new Date(hastaStr + 'T23:59:59');
+  if(isNaN(desde) || isNaN(hasta) || desde > hasta){ errEl.textContent = 'Rango de fechas inválido.'; errEl.style.display='block'; return; }
+
+  // Hoja 1: inventario actual
+  const inventario = allItems().map(it => ({
+    Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
+    Disponible_actual: disponibleDe(it), Stock_inicial: it.stockAlmacen3 ?? '', Sin_dato: it.sinDatoStock ? 'Sí' : 'No'
+  }));
+
+  // Hoja 2: movimientos del periodo
+  const movsPeriodo = movements.filter(m => {
+    const t = new Date(m.ts);
+    return t >= desde && t <= hasta;
+  });
+  const movimientosSheet = movsPeriodo.map(m => ({
+    Fecha: new Date(m.ts).toLocaleString('es-ES'), Quien: m.quien || '', Tipo: m.tipo,
+    Producto: m.producto || '', Codigo: m.codigos || '', Origen: m.area || '',
+    Destino: m.destino || '', Cantidad: m.cantidad ?? '', Disponible_resultante: m.disponibleResultante ?? '',
+    Estado: m.estado || '', Departamento: m.departamentoId ? nombreDepto(m.departamentoId) : ''
+  }));
+
+  // Hoja 3: estado de stock por artículo (entradas/salidas/ajustes del periodo)
+  const estadoStock = allItems().map(it => {
+    const movsIt = movsPeriodo.filter(m => m.itemId === it.id);
+    let entradas=0, salidas=0;
+    movsIt.forEach(m => {
+      if(m.tipo === 'entrada') entradas += (m.cantidad||0);
+      else if(m.tipo === 'salida' || (m.tipo==='pedido' && m.estado==='aprobado')) salidas += (m.cantidad||0);
+    });
+    return {
+      Codigo: it.codigos, Producto: it.producto || '', Area: it.area,
+      Entradas_periodo: entradas, Salidas_periodo: salidas, Disponible_actual: disponibleDe(it)
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventario), 'Inventario actual');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimientosSheet), 'Movimientos periodo');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(estadoStock), 'Estado stock');
+  XLSX.writeFile(wb, `reporte_inventario_${desdeStr}_a_${hastaStr}.xlsx`);
+});
+
+(async () => {
+  if(typeof window.storage === 'undefined'){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#b3341c;color:#fff;padding:14px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;text-align:center;position:sticky;top:0;z-index:200;';
+    banner.innerHTML = '⚠️ <b>Este archivo está abierto fuera de Claude</b> — el guardado compartido no funciona así.<br>Ábrelo desde el chat de Claude (la tarjeta del archivo), no desde tu carpeta de descargas.';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+  cargarLogLocal();
+  refreshUnlockButton();
+  await loadState();
+  render();
+  renderHist();
+  aplicarVisibilidadRBAC();
+  applyLang(currentLang);
+})();
+</script>
+</body>
+</html>
