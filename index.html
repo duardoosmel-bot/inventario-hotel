@@ -131,11 +131,26 @@
   /* ===== Cabecera compacta ===== */
   header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
   .hdr-top{display:flex;align-items:center;gap:8px;}
+  .hdr-modo-tabs{display:flex;gap:6px;margin-bottom:8px;}
+  .modo-tab{flex:1;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;background:#f7f3ea;color:var(--muted);font-family:Arial,sans-serif;font-size:12px;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;}
+  .modo-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
   h1{font-size:15px;margin:0;white-space:nowrap;flex-shrink:0;}
   .hdr-meta{font-size:10.5px;color:var(--muted);font-family:Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
   .sync-pending-badge{font-size:10px;font-weight:700;color:#8a5a00;background:#fbe9c8;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;align-items:center;}
   .save-btn{background:var(--ok);color:#fff;border-color:var(--ok);}
   .log-entry{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;font-family:Arial,sans-serif;}
+  .transfer-resultados{max-height:220px;overflow-y:auto;border:1.5px solid var(--line);border-radius:8px;margin-top:6px;}
+  .transfer-resultados:empty{display:none;}
+  .transfer-item-row{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-family:Arial,sans-serif;font-size:12.5px;touch-action:manipulation;}
+  .transfer-item-row:last-child{border-bottom:none;}
+  .transfer-item-row:active,.transfer-item-row:hover{background:var(--accent-soft);}
+  .transfer-item-row .ti-prod{font-weight:700;color:var(--ink);}
+  .transfer-item-row .ti-meta{color:var(--muted);font-size:11px;}
+  .transfer-seleccionado{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-family:Arial,sans-serif;font-size:12.5px;margin:8px 0;}
+  .transfer-card{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 12px 10px;font-family:Arial,sans-serif;}
+  .transfer-card .tp{font-weight:700;font-size:13px;}
+  .transfer-card .tm{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+  .transfer-card .transfer-actions{display:flex;gap:8px;margin-top:10px;}
   .log-entry .lt{color:var(--muted);font-size:10.5px;}
   .log-entry .la{font-weight:700;color:var(--accent);}
   .lang-select{font-family:Arial,sans-serif;font-size:11px;padding:5px 6px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);flex-shrink:0;}
@@ -201,11 +216,11 @@
 </head>
 <body>
 <header>
+  <div class="hdr-modo-tabs">
+    <button class="modo-tab" id="modoTabAlmacen" data-modo-btn="hotel">🏭 <span data-i18n="modoAlmacen">Almacén</span></button>
+    <button class="modo-tab" id="modoTabPdv" data-modo-btn="pdv">🏪 <span data-i18n="modoPdv">Puntos de venta</span></button>
+  </div>
   <div class="hdr-top">
-    <select class="lang-select" id="modoSelect">
-      <option value="hotel">🏨 Hotel</option>
-      <option value="pdv">🏪 Puntos de venta</option>
-    </select>
     <h1 data-i18n="appTitle">Inventario Hotel</h1>
     <span class="hdr-meta" id="hdrMeta"></span>
     <span class="sync-pending-badge" id="syncPendingBadge" style="display:none;"></span>
@@ -221,6 +236,7 @@
     <button class="tabbtn pedidos-btn" id="tabPedidos">📋 <span data-i18n="tabPedidos">Pedidos</span> <span id="pedidosCountBadge"></span></button>
     <button class="tabbtn" id="tabUsuarios" data-perm="userCRUD">👥 <span data-i18n="tabUsuarios">Usuarios</span></button>
     <button class="tabbtn" id="tabDeptos" data-perm="deptCRUD">🏢 <span data-i18n="tabDeptos">Deptos</span></button>
+    <button class="tabbtn" id="tabTransfer" data-modo="pdv" style="display:none;">🔄 <span data-i18n="tabTransfer">Transferencia</span> <span id="transferCountBadge"></span></button>
     <button class="tabbtn" id="btnRecalcStock" data-perm="recalcularStock">🔁 <span data-i18n="btnRecalcStock">Recalcular stock</span></button>
     <button class="tabbtn" id="tabLog" data-perm="verHistorialCompleto">📝 <span data-i18n="tabLog">Log</span></button>
     <button class="tabbtn save-btn" id="btnGuardarAhora">💾 <span data-i18n="btnGuardarAhora">Guardar ahora</span></button>
@@ -315,6 +331,31 @@
   <hr class="section-divider">
   <h2 class="section-title" data-i18n="deptosExistentesTitulo">Departamentos existentes</h2>
   <div id="deptosListado"></div>
+</div>
+
+<div id="viewTransfer" style="display:none;" class="hist-wrap">
+  <div class="form-card">
+    <h2 data-i18n="transferTitulo">🔄 Solicitar transferencia desde el Almacén (Hotel)</h2>
+    <p class="hint" data-i18n="transferHint">Busca un artículo del inventario del hotel y pide que se transfiera a tu punto de venta.</p>
+    <label data-i18n="transferBuscarLabel">Buscar artículo del almacén</label>
+    <input type="text" id="transferSearch" data-i18n-ph="transferBuscarPh" placeholder="Nombre, código o categoría...">
+    <div id="transferResultados" class="transfer-resultados"></div>
+    <div id="transferSeleccionBox" style="display:none;">
+      <div class="transfer-seleccionado" id="transferSeleccionadoInfo"></div>
+      <label data-i18n="transferCantidadLabel">Cantidad a transferir</label>
+      <input type="number" id="transferCantidad" min="1" step="1" placeholder="ej. 10">
+      <label data-i18n="transferDestinoLabel">Punto de venta destino</label>
+      <select id="transferDestino"></select>
+      <div class="err" id="transferErr"></div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="transferCancelarSeleccion" data-i18n="cancelar">Cancelar</button>
+        <button class="btn btn-primary" id="transferSolicitar" data-i18n="btnSolicitarTransferencia">Solicitar transferencia</button>
+      </div>
+    </div>
+  </div>
+  <hr class="section-divider">
+  <h2 class="section-title" data-i18n="transferPendientesTitulo">Transferencias solicitadas</h2>
+  <div id="transferListado"></div>
 </div>
 
 <div id="viewLog" style="display:none;" class="hist-wrap">
@@ -540,7 +581,7 @@ const DATA = [];
 // ===================== Idioma (ES / EN / SW) =====================
 const I18N = {
   es: {
-    appTitle: 'Inventario Hotel', appMetaTpl: '{n} artículos · {a} áreas', syncPendienteTxt: 'Sin subir a la nube — reintentando...',
+    appTitle: 'Inventario Almacén', appMetaTpl: '{n} artículos · {a} áreas', syncPendienteTxt: 'Sin subir a la nube — reintentando...', modoAlmacen: 'Almacén', modoPdv: 'Puntos de venta',
     tabLog: 'Log', btnGuardarAhora: 'Guardar ahora', guardadoOk: 'Guardado', guardadoLocalPendiente: 'Guardado en este dispositivo, sincronizando...',
     logHint: 'Registro de todo lo que se hace en la app (guardado por separado, sobrevive aunque el inventario se borre). Se guarda en este dispositivo al instante y también en la nube.',
     logVacio: 'Aún no hay actividad registrada.',
@@ -558,6 +599,18 @@ const I18N = {
     noUsuarios: 'Aún no hay usuarios creados.', noDeptos: 'Aún no hay departamentos creados.',
     hintCreaDeptoPrimero: '(crea un departamento primero en 🏢 Deptos)',
     errSeleccionaDepto: 'Selecciona un departamento (créalo primero en 🏢 Deptos).',
+    tabTransfer: 'Transferencia', transferTitulo: '🔄 Solicitar transferencia desde el Almacén (Hotel)',
+    transferHint: 'Busca un artículo del inventario del hotel y pide que se transfiera a tu punto de venta.',
+    transferBuscarLabel: 'Buscar artículo del almacén', transferBuscarPh: 'Nombre, código o categoría...',
+    transferCantidadLabel: 'Cantidad a transferir', transferDestinoLabel: 'Punto de venta destino',
+    btnSolicitarTransferencia: 'Solicitar transferencia', transferPendientesTitulo: 'Transferencias solicitadas',
+    transferErrSinArticulo: 'Elige primero un artículo del almacén.', transferErrCantidad: 'Indica una cantidad válida (mayor que 0).',
+    transferSolicitadaOk: '✓ Transferencia solicitada. Quedará pendiente hasta que se apruebe.',
+    transferSinSolicitudes: 'Aún no hay transferencias solicitadas.',
+    transferErrLeerAlmacen: 'No se pudo leer el inventario del almacén (Hotel). Revisa tu conexión.',
+    transferErrArticuloNoExiste: 'Ese artículo ya no existe en el almacén del hotel.',
+    transferConfirmSinStock: 'El almacén solo tiene {d} disponibles, menos de lo solicitado. ¿Aprobar de todas formas?',
+    transferAprobadaOk: '✓ Transferencia aprobada: descontado del almacén y sumado al punto de venta.',
     thFecha: 'Fecha', thQuien: 'Quién', thProducto: 'Producto', thCodigo: 'Código', thOrigen: 'Origen', thDestino: 'Destino', thCant: 'Cant.', thDisp: 'Disp. resultante',
     deshacer: 'deshacer', pedidoN: 'Pedido #', solicita: 'Solicita:', desde: 'Desde:', cantidad: 'Cantidad:',
     identificarse: 'Identificarse', sesionActiva: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
@@ -626,7 +679,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
   },
   en: {
-    appTitle: 'Hotel Inventory', appMetaTpl: '{n} items · {a} areas', syncPendienteTxt: 'Not uploaded yet — retrying...',
+    appTitle: 'Warehouse Inventory', appMetaTpl: '{n} items · {a} areas', syncPendienteTxt: 'Not uploaded yet — retrying...', modoAlmacen: 'Warehouse', modoPdv: 'Points of sale',
     tabLog: 'Log', btnGuardarAhora: 'Save now', guardadoOk: 'Saved', guardadoLocalPendiente: 'Saved on this device, syncing...',
     logHint: 'Log of everything done in the app (saved separately, survives even if the inventory is wiped). Saved instantly on this device and also in the cloud.',
     logVacio: 'No activity logged yet.',
@@ -644,6 +697,18 @@ const I18N = {
     noUsuarios: 'No users created yet.', noDeptos: 'No departments created yet.',
     hintCreaDeptoPrimero: '(create a department first in 🏢 Depts)',
     errSeleccionaDepto: 'Select a department (create it first in 🏢 Depts).',
+    tabTransfer: 'Transfer', transferTitulo: '🔄 Request transfer from the Warehouse (Hotel)',
+    transferHint: 'Search an item from the hotel inventory and request it be transferred to your point of sale.',
+    transferBuscarLabel: 'Search warehouse item', transferBuscarPh: 'Name, code or category...',
+    transferCantidadLabel: 'Quantity to transfer', transferDestinoLabel: 'Destination point of sale',
+    btnSolicitarTransferencia: 'Request transfer', transferPendientesTitulo: 'Requested transfers',
+    transferErrSinArticulo: 'Pick a warehouse item first.', transferErrCantidad: 'Enter a valid quantity (greater than 0).',
+    transferSolicitadaOk: '✓ Transfer requested. It will stay pending until approved.',
+    transferSinSolicitudes: 'No transfers requested yet.',
+    transferErrLeerAlmacen: 'Could not read the warehouse (Hotel) inventory. Check your connection.',
+    transferErrArticuloNoExiste: 'That item no longer exists in the hotel warehouse.',
+    transferConfirmSinStock: 'The warehouse only has {d} available, less than requested. Approve anyway?',
+    transferAprobadaOk: '✓ Transfer approved: deducted from the warehouse and added to the point of sale.',
     thFecha: 'Date', thQuien: 'Who', thProducto: 'Product', thCodigo: 'Code', thOrigen: 'Origin', thDestino: 'Destination', thCant: 'Qty.', thDisp: 'Resulting avail.',
     deshacer: 'undo', pedidoN: 'Order #', solicita: 'Requested by:', desde: 'From:', cantidad: 'Quantity:',
     identificarse: 'Sign in', sesionActiva: 'Signed in as', cerrarSesion: 'Sign out',
@@ -712,7 +777,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
   },
   sw: {
-    appTitle: 'Bohari ya Hoteli', appMetaTpl: 'bidhaa {n} · maeneo {a}', syncPendienteTxt: 'Bado haijapakiwa — inajaribu tena...',
+    appTitle: 'Hisa ya Ghala', appMetaTpl: 'bidhaa {n} · maeneo {a}', syncPendienteTxt: 'Bado haijapakiwa — inajaribu tena...', modoAlmacen: 'Ghala', modoPdv: 'Sehemu za mauzo',
     tabLog: 'Log', btnGuardarAhora: 'Hifadhi sasa', guardadoOk: 'Imehifadhiwa', guardadoLocalPendiente: 'Imehifadhiwa kwenye kifaa hiki, inasawazisha...',
     logHint: 'Rekodi ya kila kitu kinachofanywa kwenye programu (imehifadhiwa tofauti, inasalia hata kama hisa itafutwa). Inahifadhiwa papo hapo kwenye kifaa hiki na pia kwenye wingu.',
     logVacio: 'Bado hakuna shughuli iliyorekodiwa.',
@@ -730,6 +795,18 @@ const I18N = {
     noUsuarios: 'Bado hakuna watumiaji walioundwa.', noDeptos: 'Bado hakuna idara zilizoundwa.',
     hintCreaDeptoPrimero: '(unda idara kwanza kwenye 🏢 Idara)',
     errSeleccionaDepto: 'Chagua idara (iunde kwanza kwenye 🏢 Idara).',
+    tabTransfer: 'Uhamisho', transferTitulo: '🔄 Omba uhamisho kutoka Ghala (Hoteli)',
+    transferHint: 'Tafuta bidhaa kutoka hisa ya hoteli na uombe ihamishwe kwenye sehemu yako ya mauzo.',
+    transferBuscarLabel: 'Tafuta bidhaa ya ghalani', transferBuscarPh: 'Jina, msimbo au kategoria...',
+    transferCantidadLabel: 'Kiasi cha kuhamisha', transferDestinoLabel: 'Sehemu ya mauzo lengwa',
+    btnSolicitarTransferencia: 'Omba uhamisho', transferPendientesTitulo: 'Uhamisho ulioombwa',
+    transferErrSinArticulo: 'Chagua bidhaa ya ghalani kwanza.', transferErrCantidad: 'Ingiza kiasi sahihi (zaidi ya 0).',
+    transferSolicitadaOk: '✓ Uhamisho umeombwa. Utabaki ukisubiri hadi uthibitishwe.',
+    transferSinSolicitudes: 'Bado hakuna uhamisho ulioombwa.',
+    transferErrLeerAlmacen: 'Imeshindwa kusoma hisa ya ghala (Hoteli). Angalia muunganisho wako.',
+    transferErrArticuloNoExiste: 'Bidhaa hiyo haipo tena kwenye ghala la hoteli.',
+    transferConfirmSinStock: 'Ghala lina {d} tu zinazopatikana, chini ya ilivyoombwa. Idhinisha hata hivyo?',
+    transferAprobadaOk: '✓ Uhamisho umeidhinishwa: umetolewa ghalani na kuongezwa kwenye sehemu ya mauzo.',
     thFecha: 'Tarehe', thQuien: 'Nani', thProducto: 'Bidhaa', thCodigo: 'Msimbo', thOrigen: 'Asili', thDestino: 'Marudio', thCant: 'Kiasi', thDisp: 'Inapatikana baadaye',
     deshacer: 'tengua', pedidoN: 'Ombi #', solicita: 'Anaomba:', desde: 'Kutoka:', cantidad: 'Kiasi:',
     identificarse: 'Ingia', sesionActiva: 'Umeingia kama', cerrarSesion: 'Toka',
@@ -2574,17 +2651,249 @@ const tabPedidos = document.getElementById('tabPedidos');
 const tabUsuarios = document.getElementById('tabUsuarios');
 const tabDeptos = document.getElementById('tabDeptos');
 const tabLog = document.getElementById('tabLog');
+const tabTransfer = document.getElementById('tabTransfer');
 const viewBuscar = document.getElementById('viewBuscar');
 const viewHist = document.getElementById('viewHist');
 const viewPedidos = document.getElementById('viewPedidos');
 const viewUsuarios = document.getElementById('viewUsuarios');
 const viewDeptos = document.getElementById('viewDeptos');
 const viewLog = document.getElementById('viewLog');
+const viewTransfer = document.getElementById('viewTransfer');
 const filterRow = document.getElementById('filterRow');
 
 function nombreDepto(id){
   const d = departamentos.find(d => d.id === id);
   return d ? d.nombre : '(sin depto)';
+}
+
+// ===================== Transferencia Almacén (Hotel) → Puntos de venta =====================
+// Puente entre los dos "modos" de la app, que normalmente tienen datos completamente
+// separados. Estas funciones leen/escriben el estado del OTRO modo directamente en la
+// nube, sin afectar las variables en memoria del modo activo (salvo las del propio PDV
+// al recibir la transferencia, que se hace con el saveState() normal).
+const TRANSFER_KEY = 'transferencias_almacen_pdv'; // clave compartida, sin prefijo de modo
+let transferRequests = [];
+let hotelCatalogoCache = null; // {items, ts}
+
+async function leerEstadoDeModo(modo){
+  try{
+    const r = await window.storage.get(modo + '_inventory_state', true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function guardarEstadoDeModo(modo, payload){
+  await window.storage.set(modo + '_inventory_state', JSON.stringify(payload), true);
+}
+function disponibleEnPayload(item, payload){
+  const ss = (payload && payload.stockState) || {};
+  if(Object.prototype.hasOwnProperty.call(ss, item.id)) return ss[item.id];
+  return item.disponibleInicial ?? 0;
+}
+
+async function cargarTransferencias(){
+  try{
+    const r = await window.storage.get(TRANSFER_KEY, true);
+    transferRequests = r ? JSON.parse(r.value) : [];
+  }catch(e){ /* mantener lo que ya hubiera en memoria */ }
+}
+async function guardarTransferencias(){
+  try{
+    await window.storage.set(TRANSFER_KEY, JSON.stringify(transferRequests), true);
+    return true;
+  }catch(e){
+    console.error('No se pudo guardar la transferencia', e);
+    return false;
+  }
+}
+
+async function cargarCatalogoAlmacen(forzar){
+  if(!forzar && hotelCatalogoCache && (Date.now() - hotelCatalogoCache.ts) < 30000) return hotelCatalogoCache.items;
+  const payload = await leerEstadoDeModo('hotel');
+  const items = payload ? (payload.extraItems || []) : [];
+  hotelCatalogoCache = { items, payload, ts: Date.now() };
+  return items;
+}
+
+function renderTransferResultados(items){
+  const el = document.getElementById('transferResultados');
+  if(items.length === 0){ el.innerHTML = ''; return; }
+  el.innerHTML = items.slice(0, 30).map(it => {
+    const disp = disponibleEnPayload(it, hotelCatalogoCache.payload);
+    return `<div class="transfer-item-row" data-id="${it.id}">
+      <div class="ti-prod">${it.producto || '(sin nombre)'}</div>
+      <div class="ti-meta">${it.codigos} · ${it.area} · disponible en almacén: ${fmtNum(disp)}</div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.transfer-item-row').forEach(row => {
+    row.addEventListener('click', () => seleccionarItemTransfer(row.dataset.id));
+  });
+}
+
+let transferItemSeleccionado = null;
+function seleccionarItemTransfer(id){
+  const it = hotelCatalogoCache.items.find(i => i.id === id);
+  if(!it) return;
+  transferItemSeleccionado = it;
+  const disp = disponibleEnPayload(it, hotelCatalogoCache.payload);
+  document.getElementById('transferResultados').innerHTML = '';
+  document.getElementById('transferSearch').value = '';
+  document.getElementById('transferSeleccionadoInfo').innerHTML =
+    `<b>${it.producto || '(sin nombre)'}</b><br>${it.codigos} · ${it.area}<br>Disponible en almacén: <b>${fmtNum(disp)}</b>`;
+  document.getElementById('transferCantidad').value = '';
+  document.getElementById('transferErr').style.display = 'none';
+  const sel = document.getElementById('transferDestino');
+  sel.innerHTML = departamentos.map(d => `<option value="${d.id}">${d.nombre}</option>`).join('')
+    || `<option value="">${t('hintCreaDeptoPrimero')}</option>`;
+  if(currentUser && currentUser.departamentoId) sel.value = currentUser.departamentoId;
+  document.getElementById('transferSeleccionBox').style.display = 'block';
+}
+
+document.getElementById('transferSearch').addEventListener('input', async (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if(!q){ document.getElementById('transferResultados').innerHTML = ''; return; }
+  const items = await cargarCatalogoAlmacen(false);
+  const filtrados = items.filter(it => (it.producto+' '+it.specs+' '+it.codigos+' '+it.area).toLowerCase().includes(q));
+  renderTransferResultados(filtrados);
+});
+
+document.getElementById('transferCancelarSeleccion').addEventListener('click', () => {
+  transferItemSeleccionado = null;
+  document.getElementById('transferSeleccionBox').style.display = 'none';
+});
+
+document.getElementById('transferSolicitar').addEventListener('click', async () => {
+  const errEl = document.getElementById('transferErr');
+  errEl.style.display = 'none';
+  if(!currentUser){ errEl.textContent = t('debeIdentificarse'); errEl.style.display='block'; return; }
+  if(!transferItemSeleccionado){ errEl.textContent = t('transferErrSinArticulo'); errEl.style.display='block'; return; }
+  const cantidad = parseFloat(document.getElementById('transferCantidad').value);
+  if(!cantidad || cantidad <= 0){ errEl.textContent = t('transferErrCantidad'); errEl.style.display='block'; return; }
+  const destinoId = document.getElementById('transferDestino').value;
+  if(!destinoId){ errEl.textContent = t('errSeleccionaDepto'); errEl.style.display='block'; return; }
+
+  const it = transferItemSeleccionado;
+  const registro = {
+    id: 'tr_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    ts: new Date().toISOString(),
+    itemHotelId: it.id, producto: it.producto, codigos: it.codigos, specs: it.specs, area: it.area,
+    cantidad, puntoVentaId: destinoId, puntoVentaNombre: nombreDepto(destinoId),
+    solicitante: currentUser.name, estado: 'pendiente'
+  };
+  await cargarTransferencias();
+  transferRequests.unshift(registro);
+  const ok = await guardarTransferencias();
+  if(!ok){ errEl.textContent = t('errorGuardarGenerico'); errEl.style.display='block'; transferRequests.shift(); return; }
+  registrarLog('Transferencia solicitada', `${it.producto} (${it.codigos}) — ${fmtNum(cantidad)} → ${registro.puntoVentaNombre}`);
+  transferItemSeleccionado = null;
+  document.getElementById('transferSeleccionBox').style.display = 'none';
+  renderTransferencias();
+  alert(t('transferSolicitadaOk'));
+});
+
+function renderTransferencias(){
+  const el = document.getElementById('transferListado');
+  const puedeAprobar = can('pedidosAprobar');
+  let lista = transferRequests;
+  if(!puedeAprobar){
+    lista = currentUser && currentUser.departamentoId
+      ? lista.filter(r => r.puntoVentaId === currentUser.departamentoId)
+      : lista.filter(r => r.solicitante === (currentUser && currentUser.name));
+  }
+  document.getElementById('transferCountBadge').innerHTML = '';
+  const pendientesCount = transferRequests.filter(r => r.estado === 'pendiente').length;
+  if(puedeAprobar && pendientesCount){
+    document.getElementById('transferCountBadge').innerHTML = `<span class="badge-alert">${pendientesCount}</span>`;
+  }
+  if(lista.length === 0){ el.innerHTML = `<div class="hist-empty">${t('transferSinSolicitudes')}</div>`; return; }
+  el.innerHTML = lista.map(r => {
+    const estadoTxt = r.estado === 'pendiente' ? t('pendiente') : r.estado === 'aprobado' ? t('aprobado') : t('rechazado');
+    const acciones = (puedeAprobar && r.estado === 'pendiente') ? `
+      <div class="transfer-actions">
+        <button class="btn btn-approve" data-action="aprobar" data-id="${r.id}">${t('aprobar')}</button>
+        <button class="btn btn-reject" data-action="rechazar" data-id="${r.id}">${t('rechazar')}</button>
+      </div>` : '';
+    return `<div class="transfer-card">
+      <div class="tp">${r.producto} <span class="estado-badge ${r.estado}">${estadoTxt}</span></div>
+      <div class="tm">
+        ${t('thCodigo')}: ${r.codigos}<br>
+        ${t('cantidad')} <b>${fmtNum(r.cantidad)}</b><br>
+        ${t('solicita')} <b>${r.solicitante}</b> → <b>${r.puntoVentaNombre}</b><br>
+        ${new Date(r.ts).toLocaleString('es-ES')}
+      </div>
+      ${acciones}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => resolverTransferencia(btn.dataset.id, btn.dataset.action));
+  });
+}
+
+async function resolverTransferencia(id, accion){
+  if(!can('pedidosAprobar')) return;
+  await cargarTransferencias();
+  const reg = transferRequests.find(r => r.id === id);
+  if(!reg || reg.estado !== 'pendiente') return;
+
+  if(accion === 'rechazar'){
+    reg.estado = 'rechazado';
+    const ok = await guardarTransferencias();
+    if(!ok){ alert(t('errorGuardarGenerico')); return; }
+    registrarLog('Transferencia rechazada', `${reg.producto} (${reg.codigos}) — ${fmtNum(reg.cantidad)} → ${reg.puntoVentaNombre}`);
+    renderTransferencias();
+    return;
+  }
+
+  // ===== Aprobar: descontar del Hotel y sumar en Puntos de venta =====
+  const hotelPayload = await leerEstadoDeModo('hotel');
+  if(!hotelPayload){ alert(t('transferErrLeerAlmacen')); return; }
+  const itHotel = (hotelPayload.extraItems || []).find(i => i.id === reg.itemHotelId);
+  if(!itHotel){ alert(t('transferErrArticuloNoExiste')); return; }
+  const dispHotel = disponibleEnPayload(itHotel, hotelPayload);
+  if(dispHotel < reg.cantidad){
+    if(!confirm(t('transferConfirmSinStock').replace('{d}', fmtNum(dispHotel)))) return;
+  }
+  hotelPayload.stockState = hotelPayload.stockState || {};
+  hotelPayload.stockState[itHotel.id] = dispHotel - reg.cantidad;
+  hotelPayload.movements = hotelPayload.movements || [];
+  hotelPayload.movements.unshift({
+    ts: new Date().toISOString(), itemId: itHotel.id, tipo: 'salida',
+    producto: itHotel.producto, codigos: itHotel.codigos, area: itHotel.area,
+    destino: 'Punto de venta: ' + reg.puntoVentaNombre, cantidad: reg.cantidad,
+    disponibleResultante: hotelPayload.stockState[itHotel.id],
+    quien: currentUser.name
+  });
+  await guardarEstadoDeModo('hotel', hotelPayload);
+  hotelCatalogoCache = null; // invalidar cache, el almacen cambio
+
+  // Sumar en el catalogo del PDV (modo actual): reutilizar articulo si ya existe por codigo
+  await loadState();
+  let itPdv = extraItems.find(i => i.codigos === itHotel.codigos);
+  if(!itPdv){
+    itPdv = {
+      id: 'it_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      area: itHotel.area, codigos: itHotel.codigos, producto: itHotel.producto,
+      specs: itHotel.specs, qtyReq: 0, disponibleInicial: 0
+    };
+    extraItems.push(itPdv);
+    byId[itPdv.id] = itPdv;
+  }
+  const dispPdvActual = disponibleDe(itPdv);
+  stockState[itPdv.id] = dispPdvActual + reg.cantidad;
+  movements.unshift({
+    ts: new Date().toISOString(), itemId: itPdv.id, tipo: 'entrada',
+    producto: itPdv.producto, codigos: itPdv.codigos, area: itPdv.area,
+    destino: itPdv.area, cantidad: reg.cantidad, disponibleResultante: stockState[itPdv.id],
+    quien: currentUser.name + ' (transferencia almacén)'
+  });
+  const okPdv = await saveState();
+  if(!okPdv){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
+
+  reg.estado = 'aprobado';
+  await guardarTransferencias();
+  registrarLog('Transferencia aprobada', `${reg.producto} (${reg.codigos}) — ${fmtNum(reg.cantidad)} → ${reg.puntoVentaNombre}`);
+  render();
+  renderTransferencias();
+  alert(t('transferAprobadaOk'));
 }
 
 function renderUsuarios(){
@@ -2651,13 +2960,24 @@ function renderDeptos(){
 }
 
 function hideAllViews(){
-  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active'); tabLog.classList.remove('active');
-  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none'; viewLog.style.display='none';
+  tabBuscar.classList.remove('active'); tabHist.classList.remove('active'); tabPedidos.classList.remove('active'); tabUsuarios.classList.remove('active'); tabDeptos.classList.remove('active'); tabLog.classList.remove('active'); tabTransfer.classList.remove('active');
+  viewBuscar.style.display='none'; viewHist.style.display='none'; viewPedidos.style.display='none'; viewUsuarios.style.display='none'; viewDeptos.style.display='none'; viewLog.style.display='none'; viewTransfer.style.display='none';
 }
 tabBuscar.addEventListener('click', () => {
   hideAllViews();
   tabBuscar.classList.add('active');
   viewBuscar.style.display='block';
+});
+tabTransfer.addEventListener('click', async () => {
+  if(!currentUser){ alert(t('debeIdentificarse')); return; }
+  hideAllViews();
+  tabTransfer.classList.add('active');
+  viewTransfer.style.display='block';
+  document.getElementById('transferSeleccionBox').style.display = 'none';
+  document.getElementById('transferSearch').value = '';
+  document.getElementById('transferResultados').innerHTML = '';
+  await cargarTransferencias();
+  renderTransferencias();
 });
 tabLog.addEventListener('click', async () => {
   if(!can('verHistorialCompleto')){ alert('Tu rol no tiene acceso al log.'); return; }
@@ -2718,12 +3038,23 @@ onlySinDato.addEventListener('change', render);
 
 document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
 
-document.getElementById('modoSelect').value = modoApp;
-document.getElementById('modoSelect').addEventListener('change', (e) => {
-  const nuevo = e.target.value;
-  if(nuevo === modoApp) return;
-  localStorage.setItem('modoApp', nuevo);
-  location.reload();
+function actualizarModoTabs(){
+  document.getElementById('modoTabAlmacen').classList.toggle('active', modoApp === 'hotel');
+  document.getElementById('modoTabPdv').classList.toggle('active', modoApp === 'pdv');
+}
+actualizarModoTabs();
+document.querySelectorAll('[data-modo-btn]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const nuevo = btn.getAttribute('data-modo-btn');
+    if(nuevo !== modoApp){
+      localStorage.setItem('modoApp', nuevo);
+      localStorage.setItem('modoApp_abrirLoginAlEntrar', '1');
+      location.reload();
+      return;
+    }
+    // ya estas en este modo: abrir directamente el PIN
+    btnUser.click();
+  });
 });
 
 const btnMoreMenu = document.getElementById('btnMoreMenu');
@@ -2820,6 +3151,9 @@ function aplicarVisibilidadRBAC(){
   document.querySelectorAll('[data-perm]').forEach(el => {
     const perm = el.getAttribute('data-perm');
     el.style.display = can(perm) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-modo]').forEach(el => {
+    el.style.display = (el.getAttribute('data-modo') === modoApp) ? '' : 'none';
   });
 }
 
@@ -2927,6 +3261,10 @@ document.getElementById('exportConfirm').addEventListener('click', async () => {
   renderHist();
   aplicarVisibilidadRBAC();
   applyLang(currentLang);
+  if(localStorage.getItem('modoApp_abrirLoginAlEntrar') === '1'){
+    localStorage.removeItem('modoApp_abrirLoginAlEntrar');
+    btnUser.click();
+  }
 })();
 </script>
 </body>
