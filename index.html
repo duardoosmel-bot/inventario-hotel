@@ -131,9 +131,15 @@
   /* ===== Cabecera compacta ===== */
   header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
   .hdr-top{display:flex;align-items:center;gap:8px;}
-  .hdr-modo-tabs{display:flex;gap:6px;margin-bottom:8px;}
-  .modo-tab{flex:1;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;background:#f7f3ea;color:var(--muted);font-family:Arial,sans-serif;font-size:12px;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;}
-  .modo-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .hdr-cambiar-btn{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:15px;cursor:pointer;touch-action:manipulation;}
+  #portada{position:fixed;inset:0;background:var(--paper);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .portada-box{max-width:360px;width:100%;text-align:center;}
+  .portada-title{font-size:26px;margin:0 0 6px;color:var(--ink);}
+  .portada-sub{font-family:Arial,sans-serif;color:var(--muted);font-size:13.5px;margin:0 0 26px;}
+  .portada-btn{display:flex;align-items:center;gap:14px;width:100%;padding:18px 20px;margin-bottom:14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;text-align:left;touch-action:manipulation;box-shadow:0 2px 6px rgba(43,36,29,.06);}
+  .portada-btn:active{background:var(--accent-soft);border-color:var(--accent);}
+  .portada-btn .pb-icon{font-size:30px;flex-shrink:0;}
+  .portada-btn .pb-label{font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
   h1{font-size:15px;margin:0;white-space:nowrap;flex-shrink:0;}
   .hdr-meta{font-size:10.5px;color:var(--muted);font-family:Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
   .sync-pending-badge{font-size:10px;font-weight:700;color:#8a5a00;background:#fbe9c8;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;align-items:center;}
@@ -215,12 +221,24 @@
 </style>
 </head>
 <body>
-<header>
-  <div class="hdr-modo-tabs">
-    <button class="modo-tab" id="modoTabAlmacen" data-modo-btn="hotel">🏭 <span data-i18n="modoAlmacen">Almacén</span></button>
-    <button class="modo-tab" id="modoTabPdv" data-modo-btn="pdv">🏪 <span data-i18n="modoPdv">Puntos de venta</span></button>
+<div id="portada">
+  <div class="portada-box">
+    <h1 class="portada-title">📦 Inventario</h1>
+    <p class="portada-sub" data-i18n="portadaSub">¿Dónde quieres entrar?</p>
+    <button class="portada-btn" id="portadaAlmacen" data-modo-btn="hotel">
+      <span class="pb-icon">🏭</span>
+      <span class="pb-label" data-i18n="modoAlmacen">Almacén</span>
+    </button>
+    <button class="portada-btn" id="portadaPdv" data-modo-btn="pdv">
+      <span class="pb-icon">🏪</span>
+      <span class="pb-label" data-i18n="modoPdv">Puntos de venta</span>
+    </button>
   </div>
+</div>
+<div id="appMain" style="display:none;">
+<header>
   <div class="hdr-top">
+    <button class="hdr-cambiar-btn" id="btnCambiarModo" title="Cambiar de espacio">↩</button>
     <h1 data-i18n="appTitle">Inventario Hotel</h1>
     <span class="hdr-meta" id="hdrMeta"></span>
     <span class="sync-pending-badge" id="syncPendingBadge" style="display:none;"></span>
@@ -581,7 +599,7 @@ const DATA = [];
 // ===================== Idioma (ES / EN / SW) =====================
 const I18N = {
   es: {
-    appTitle: 'Inventario Almacén', appMetaTpl: '{n} artículos · {a} áreas', syncPendienteTxt: 'Sin subir a la nube — reintentando...', modoAlmacen: 'Almacén', modoPdv: 'Puntos de venta',
+    appTitle: 'Inventario Almacén', appMetaTpl: '{n} artículos · {a} áreas', syncPendienteTxt: 'Sin subir a la nube — reintentando...', modoAlmacen: 'Almacén', modoPdv: 'Puntos de venta', portadaSub: '¿Dónde quieres entrar?',
     tabLog: 'Log', btnGuardarAhora: 'Guardar ahora', guardadoOk: 'Guardado', guardadoLocalPendiente: 'Guardado en este dispositivo, sincronizando...',
     logHint: 'Registro de todo lo que se hace en la app (guardado por separado, sobrevive aunque el inventario se borre). Se guarda en este dispositivo al instante y también en la nube.',
     logVacio: 'Aún no hay actividad registrada.',
@@ -679,7 +697,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ No se pudo guardar el recálculo:', sinPermisoRecalculo: 'Tu rol no puede recalcular el stock.',
   },
   en: {
-    appTitle: 'Warehouse Inventory', appMetaTpl: '{n} items · {a} areas', syncPendienteTxt: 'Not uploaded yet — retrying...', modoAlmacen: 'Warehouse', modoPdv: 'Points of sale',
+    appTitle: 'Warehouse Inventory', appMetaTpl: '{n} items · {a} areas', syncPendienteTxt: 'Not uploaded yet — retrying...', modoAlmacen: 'Warehouse', modoPdv: 'Points of sale', portadaSub: 'Where do you want to go?',
     tabLog: 'Log', btnGuardarAhora: 'Save now', guardadoOk: 'Saved', guardadoLocalPendiente: 'Saved on this device, syncing...',
     logHint: 'Log of everything done in the app (saved separately, survives even if the inventory is wiped). Saved instantly on this device and also in the cloud.',
     logVacio: 'No activity logged yet.',
@@ -777,7 +795,7 @@ const I18N = {
     errorGuardarRecalculo: '✗ Could not save the recalculation:', sinPermisoRecalculo: 'Your role cannot recalculate stock.',
   },
   sw: {
-    appTitle: 'Hisa ya Ghala', appMetaTpl: 'bidhaa {n} · maeneo {a}', syncPendienteTxt: 'Bado haijapakiwa — inajaribu tena...', modoAlmacen: 'Ghala', modoPdv: 'Sehemu za mauzo',
+    appTitle: 'Hisa ya Ghala', appMetaTpl: 'bidhaa {n} · maeneo {a}', syncPendienteTxt: 'Bado haijapakiwa — inajaribu tena...', modoAlmacen: 'Ghala', modoPdv: 'Sehemu za mauzo', portadaSub: 'Unataka kuingia wapi?',
     tabLog: 'Log', btnGuardarAhora: 'Hifadhi sasa', guardadoOk: 'Imehifadhiwa', guardadoLocalPendiente: 'Imehifadhiwa kwenye kifaa hiki, inasawazisha...',
     logHint: 'Rekodi ya kila kitu kinachofanywa kwenye programu (imehifadhiwa tofauti, inasalia hata kama hisa itafutwa). Inahifadhiwa papo hapo kwenye kifaa hiki na pia kwenye wingu.',
     logVacio: 'Bado hakuna shughuli iliyorekodiwa.',
@@ -3038,22 +3056,16 @@ onlySinDato.addEventListener('change', render);
 
 document.getElementById('langSelect').addEventListener('change', (e) => applyLang(e.target.value));
 
-function actualizarModoTabs(){
-  document.getElementById('modoTabAlmacen').classList.toggle('active', modoApp === 'hotel');
-  document.getElementById('modoTabPdv').classList.toggle('active', modoApp === 'pdv');
-}
-actualizarModoTabs();
+document.getElementById('btnCambiarModo').addEventListener('click', () => location.reload());
 document.querySelectorAll('[data-modo-btn]').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const nuevo = btn.getAttribute('data-modo-btn');
-    if(nuevo !== modoApp){
-      localStorage.setItem('modoApp', nuevo);
-      localStorage.setItem('modoApp_abrirLoginAlEntrar', '1');
-      location.reload();
-      return;
-    }
-    // ya estas en este modo: abrir directamente el PIN
-    btnUser.click();
+    modoApp = nuevo;
+    localStorage.setItem('modoApp', nuevo);
+    document.getElementById('portada').style.display = 'none';
+    document.getElementById('appMain').style.display = 'block';
+    await iniciarApp();
+    btnUser.click(); // entrar directo con el PIN del lugar elegido
   });
 });
 
@@ -3242,30 +3254,4 @@ document.getElementById('exportConfirm').addEventListener('click', async () => {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventario), 'Inventario actual');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimientosSheet), 'Movimientos periodo');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(estadoStock), 'Estado stock');
-  XLSX.writeFile(wb, `reporte_inventario_${desdeStr}_a_${hastaStr}.xlsx`);
-});
-
-(async () => {
-  if(typeof window.storage === 'undefined'){
-    const banner = document.createElement('div');
-    banner.style.cssText = 'background:#b3341c;color:#fff;padding:14px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;text-align:center;position:sticky;top:0;z-index:200;';
-    banner.innerHTML = '⚠️ <b>Este archivo está abierto fuera de Claude</b> — el guardado compartido no funciona así.<br>Ábrelo desde el chat de Claude (la tarjeta del archivo), no desde tu carpeta de descargas.';
-    document.body.insertBefore(banner, document.body.firstChild);
-  }
-  cargarLogLocal();
-  refreshUnlockButton();
-  await loadState();
-  render();
-  renderHist();
-  aplicarVisibilidadRBAC();
-  applyLang(currentLang);
-  if(localStorage.getItem('modoApp_abrirLoginAlEntrar') === '1'){
-    localStorage.removeItem('modoApp_abrirLoginAlEntrar');
-    btnUser.click();
-  }
-})();
-</script>
-</body>
-</html>
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimien
