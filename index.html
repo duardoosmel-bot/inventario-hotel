@@ -954,7 +954,13 @@ function guardarBackupLocal(payload, pendingSync){
 function leerBackupLocal(){
   try{
     const raw = localStorage.getItem(claveBackupLocal());
-    return raw ? JSON.parse(raw) : null;
+    if(raw) return JSON.parse(raw);
+    if(modoApp === 'hotel'){
+      // migrar respaldo local de antes de que existiera el selector de modo
+      const viejo = localStorage.getItem(LOCAL_BACKUP_KEY_BASE);
+      if(viejo) return JSON.parse(viejo);
+    }
+    return null;
   }catch(e){ return null; }
 }
 
@@ -1010,7 +1016,12 @@ let logPendingSync = false;
 function cargarLogLocal(){
   try{
     const raw = localStorage.getItem(claveLog());
-    actionLog = raw ? JSON.parse(raw) : [];
+    if(raw){ actionLog = JSON.parse(raw); return; }
+    if(modoApp === 'hotel'){
+      const viejo = localStorage.getItem(LOG_KEY_BASE);
+      if(viejo){ actionLog = JSON.parse(viejo); return; }
+    }
+    actionLog = [];
   }catch(e){ actionLog = []; }
 }
 function guardarLogLocal(){
@@ -1037,7 +1048,10 @@ async function registrarLog(accion, detalle){
 }
 async function cargarLogDesdeNube(){
   try{
-    const r = await window.storage.get(claveLogNube(), true);
+    let r = await window.storage.get(claveLogNube(), true);
+    if(!r && modoApp === 'hotel'){
+      r = await window.storage.get(LOG_CLOUD_KEY_BASE, true); // log de antes del selector de modo
+    }
     if(r){
       const nube = JSON.parse(r.value);
       // quedarse con el mas completo entre nube y local, por si uno se quedo atras
@@ -1069,13 +1083,27 @@ function marcarQueYaHuboDatos(){
   try{ localStorage.setItem(claveHasDataMarker(), '1'); }catch(e){}
 }
 function yaHuboDatosAntes(){
-  try{ return localStorage.getItem(claveHasDataMarker()) === '1'; }catch(e){ return false; }
+  try{
+    if(localStorage.getItem(claveHasDataMarker()) === '1') return true;
+    if(modoApp === 'hotel' && localStorage.getItem(HAS_DATA_MARKER_KEY_BASE) === '1') return true;
+    return false;
+  }catch(e){ return false; }
 }
 
 async function loadState(){
   let cloudLoaded = false;
   try{
-    const r = await window.storage.get(claveModo('inventory_state'), true);
+    let r = await window.storage.get(claveModo('inventory_state'), true);
+    let migrandoDesdeClaveVieja = false;
+    if(!r && modoApp === 'hotel'){
+      // El selector de modo (Hotel/Puntos de venta) renombro la clave de
+      // 'inventory_state' a 'hotel_inventory_state'. Si aun no existe la nueva
+      // pero SI existe la vieja (version anterior de la app, sin modos), la
+      // usamos y la migramos, para no dejar "vacio" un inventario que en
+      // realidad ya tenia articulos guardados.
+      const viejo = await window.storage.get('inventory_state', true);
+      if(viejo){ r = viejo; migrandoDesdeClaveVieja = true; }
+    }
     if(r){
       const s = JSON.parse(r.value);
       stockState = s.stockState || {};
@@ -1096,6 +1124,9 @@ async function loadState(){
       hotelAreas = s.hotelAreas || hotelAreas;
       orderCounter = s.orderCounter || 0;
       marcarQueYaHuboDatos();
+      if(migrandoDesdeClaveVieja){
+        await saveState(); // guardar ya mismo bajo la clave nueva 'hotel_inventory_state'
+      }
     } else if(yaHuboDatosAntes()){
       // CRITICO: ya sabemos (por este mismo dispositivo) que existen datos reales
       // en la nube, pero esta lectura concreta los devolvio vacios. Esto es tipico
