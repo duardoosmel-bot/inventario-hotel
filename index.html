@@ -169,6 +169,14 @@
   .transfer-item-row .ti-prod{font-weight:700;color:var(--ink);}
   .transfer-item-row .ti-meta{color:var(--muted);font-size:11px;}
   .transfer-seleccionado{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-family:Arial,sans-serif;font-size:12.5px;margin:8px 0;}
+  .carrito-titulo{font-family:Arial,sans-serif;font-size:13px;margin:14px 0 8px;color:var(--ink);}
+  .carrito-fila{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:10px;padding:9px 10px;margin-bottom:8px;font-family:Arial,sans-serif;}
+  .carrito-fila .cf-info{flex:1;min-width:0;}
+  .carrito-fila .cf-prod{font-weight:700;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .carrito-fila .cf-meta{font-size:10.5px;color:var(--muted);}
+  .carrito-fila input[type=number]{width:70px;flex-shrink:0;padding:8px;text-align:center;font-size:14px;}
+  .carrito-fila .cf-quitar{flex-shrink:0;background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px 6px;touch-action:manipulation;}
+  .carrito-vacio{font-family:Arial,sans-serif;font-size:12px;color:var(--muted);padding:10px 0;}
   .transfer-card{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 12px 10px;font-family:Arial,sans-serif;}
   .transfer-card .tp{font-weight:700;font-size:13px;}
   .transfer-card .tm{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
@@ -426,10 +434,10 @@
     <label data-i18n="transferBuscarLabel">Buscar artículo del almacén</label>
     <input type="text" id="transferSearch" data-i18n-ph="transferBuscarPh" placeholder="Nombre, código o categoría...">
     <div id="transferResultados" class="transfer-resultados"></div>
-    <div id="transferSeleccionBox" style="display:none;">
-      <div class="transfer-seleccionado" id="transferSeleccionadoInfo"></div>
-      <label data-i18n="transferCantidadLabel">Cantidad a transferir</label>
-      <input type="number" id="transferCantidad" min="1" step="1" placeholder="ej. 10">
+
+    <div id="transferCarritoBox" style="display:none;">
+      <h3 class="carrito-titulo" data-i18n="transferCarritoTitulo">Artículos a transferir</h3>
+      <div id="transferCarrito"></div>
       <label data-i18n="transferDestinoLabel">Punto de venta destino</label>
       <select id="transferDestino"></select>
       <div class="err" id="transferErr"></div>
@@ -697,6 +705,8 @@ const I18N = {
     transferErrArticuloNoExiste: 'Ese artículo ya no existe en el almacén del hotel.',
     transferConfirmSinStock: 'El almacén solo tiene {d} disponibles, menos de lo solicitado. ¿Aprobar de todas formas?',
     transferAprobadaOk: '✓ Transferencia aprobada: descontado del almacén y sumado al punto de venta.',
+    transferCarritoTitulo: 'Artículos a transferir', transferDisponibleAlmacen: 'disponible en almacén:',
+    transferVariosArticulos: '{n} artículos',
     thFecha: 'Fecha', thQuien: 'Quién', thProducto: 'Producto', thCodigo: 'Código', thOrigen: 'Origen', thDestino: 'Destino', thCant: 'Cant.', thDisp: 'Disp. resultante',
     deshacer: 'deshacer', pedidoN: 'Pedido #', solicita: 'Solicita:', desde: 'Desde:', cantidad: 'Cantidad:',
     identificarse: 'Identificarse', sesionActiva: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
@@ -796,6 +806,8 @@ const I18N = {
     transferErrArticuloNoExiste: 'That item no longer exists in the hotel warehouse.',
     transferConfirmSinStock: 'The warehouse only has {d} available, less than requested. Approve anyway?',
     transferAprobadaOk: '✓ Transfer approved: deducted from the warehouse and added to the point of sale.',
+    transferCarritoTitulo: 'Items to transfer', transferDisponibleAlmacen: 'available in warehouse:',
+    transferVariosArticulos: '{n} items',
     thFecha: 'Date', thQuien: 'Who', thProducto: 'Product', thCodigo: 'Code', thOrigen: 'Origin', thDestino: 'Destination', thCant: 'Qty.', thDisp: 'Resulting avail.',
     deshacer: 'undo', pedidoN: 'Order #', solicita: 'Requested by:', desde: 'From:', cantidad: 'Quantity:',
     identificarse: 'Sign in', sesionActiva: 'Signed in as', cerrarSesion: 'Sign out',
@@ -895,6 +907,8 @@ const I18N = {
     transferErrArticuloNoExiste: 'Bidhaa hiyo haipo tena kwenye ghala la hoteli.',
     transferConfirmSinStock: 'Ghala lina {d} tu zinazopatikana, chini ya ilivyoombwa. Idhinisha hata hivyo?',
     transferAprobadaOk: '✓ Uhamisho umeidhinishwa: umetolewa ghalani na kuongezwa kwenye sehemu ya mauzo.',
+    transferCarritoTitulo: 'Bidhaa za kuhamisha', transferDisponibleAlmacen: 'zinazopatikana ghalani:',
+    transferVariosArticulos: 'bidhaa {n}',
     thFecha: 'Tarehe', thQuien: 'Nani', thProducto: 'Bidhaa', thCodigo: 'Msimbo', thOrigen: 'Asili', thDestino: 'Marudio', thCant: 'Kiasi', thDisp: 'Inapatikana baadaye',
     deshacer: 'tengua', pedidoN: 'Ombi #', solicita: 'Anaomba:', desde: 'Kutoka:', cantidad: 'Kiasi:',
     identificarse: 'Ingia', sesionActiva: 'Umeingia kama', cerrarSesion: 'Toka',
@@ -2825,23 +2839,59 @@ function renderTransferResultados(items){
   });
 }
 
-let transferItemSeleccionado = null;
+let transferCarrito = []; // [{item, cantidad}]
+
 function seleccionarItemTransfer(id){
   const it = hotelCatalogoCache.items.find(i => i.id === id);
   if(!it) return;
-  transferItemSeleccionado = it;
-  const disp = disponibleEnPayload(it, hotelCatalogoCache.payload);
+  if(transferCarrito.some(f => f.item.id === id)){
+    document.getElementById('transferSearch').value = '';
+    document.getElementById('transferResultados').innerHTML = '';
+    return; // ya esta en el carrito, no lo duplicamos
+  }
+  transferCarrito.push({ item: it, cantidad: 1 });
   document.getElementById('transferResultados').innerHTML = '';
   document.getElementById('transferSearch').value = '';
-  document.getElementById('transferSeleccionadoInfo').innerHTML =
-    `<b>${it.producto || '(sin nombre)'}</b><br>${it.codigos} · ${it.area}<br>Disponible en almacén: <b>${fmtNum(disp)}</b>`;
-  document.getElementById('transferCantidad').value = '';
-  document.getElementById('transferErr').style.display = 'none';
+  document.getElementById('transferSearch').focus();
+  renderCarrito();
+}
+
+function renderCarrito(){
+  const box = document.getElementById('transferCarritoBox');
+  const cont = document.getElementById('transferCarrito');
+  if(transferCarrito.length === 0){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  cont.innerHTML = transferCarrito.map((f, i) => {
+    const disp = disponibleEnPayload(f.item, hotelCatalogoCache.payload);
+    return `<div class="carrito-fila" data-idx="${i}">
+      <div class="cf-info">
+        <div class="cf-prod">${f.item.producto || '(sin nombre)'}</div>
+        <div class="cf-meta">${f.item.codigos} · ${t('transferDisponibleAlmacen')} ${fmtNum(disp)}</div>
+      </div>
+      <input type="number" min="1" step="1" value="${f.cantidad}" data-idx="${i}" class="cf-cantidad">
+      <button type="button" class="cf-quitar" data-idx="${i}" title="${t('cancelar')}">✕</button>
+    </div>`;
+  }).join('');
+  cont.querySelectorAll('.cf-cantidad').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const i = parseInt(inp.dataset.idx);
+      transferCarrito[i].cantidad = parseFloat(inp.value) || 0;
+    });
+  });
+  cont.querySelectorAll('.cf-quitar').forEach(btn => {
+    btn.addEventListener('click', () => {
+      transferCarrito.splice(parseInt(btn.dataset.idx), 1);
+      renderCarrito();
+    });
+  });
   const sel = document.getElementById('transferDestino');
   sel.innerHTML = departamentos.map(d => `<option value="${d.id}">${d.nombre}</option>`).join('')
     || `<option value="">${t('hintCreaDeptoPrimero')}</option>`;
   if(currentUser && currentUser.departamentoId) sel.value = currentUser.departamentoId;
-  document.getElementById('transferSeleccionBox').style.display = 'block';
+  document.getElementById('transferErr').style.display = 'none';
 }
 
 document.getElementById('transferSearch').addEventListener('input', async (e) => {
@@ -2853,38 +2903,47 @@ document.getElementById('transferSearch').addEventListener('input', async (e) =>
 });
 
 document.getElementById('transferCancelarSeleccion').addEventListener('click', () => {
-  transferItemSeleccionado = null;
-  document.getElementById('transferSeleccionBox').style.display = 'none';
+  transferCarrito = [];
+  document.getElementById('transferCarritoBox').style.display = 'none';
 });
 
 document.getElementById('transferSolicitar').addEventListener('click', async () => {
   const errEl = document.getElementById('transferErr');
   errEl.style.display = 'none';
   if(!currentUser){ errEl.textContent = t('debeIdentificarse'); errEl.style.display='block'; return; }
-  if(!transferItemSeleccionado){ errEl.textContent = t('transferErrSinArticulo'); errEl.style.display='block'; return; }
-  const cantidad = parseFloat(document.getElementById('transferCantidad').value);
-  if(!cantidad || cantidad <= 0){ errEl.textContent = t('transferErrCantidad'); errEl.style.display='block'; return; }
+  if(transferCarrito.length === 0){ errEl.textContent = t('transferErrSinArticulo'); errEl.style.display='block'; return; }
+  if(transferCarrito.some(f => !f.cantidad || f.cantidad <= 0)){ errEl.textContent = t('transferErrCantidad'); errEl.style.display='block'; return; }
   const destinoId = document.getElementById('transferDestino').value;
   if(!destinoId){ errEl.textContent = t('errSeleccionaDepto'); errEl.style.display='block'; return; }
 
-  const it = transferItemSeleccionado;
   const registro = {
     id: 'tr_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     ts: new Date().toISOString(),
-    itemHotelId: it.id, producto: it.producto, codigos: it.codigos, specs: it.specs, area: it.area,
-    cantidad, puntoVentaId: destinoId, puntoVentaNombre: nombreDepto(destinoId),
+    items: transferCarrito.map(f => ({
+      itemHotelId: f.item.id, producto: f.item.producto, codigos: f.item.codigos,
+      specs: f.item.specs, area: f.item.area, cantidad: f.cantidad
+    })),
+    puntoVentaId: destinoId, puntoVentaNombre: nombreDepto(destinoId),
     solicitante: currentUser.name, estado: 'pendiente'
   };
   await cargarTransferencias();
   transferRequests.unshift(registro);
   const ok = await guardarTransferencias();
   if(!ok){ errEl.textContent = t('errorGuardarGenerico'); errEl.style.display='block'; transferRequests.shift(); return; }
-  registrarLog('Transferencia solicitada', `${it.producto} (${it.codigos}) — ${fmtNum(cantidad)} → ${registro.puntoVentaNombre}`);
-  transferItemSeleccionado = null;
-  document.getElementById('transferSeleccionBox').style.display = 'none';
+  const resumen = registro.items.map(it => `${it.producto} (${fmtNum(it.cantidad)})`).join(', ');
+  registrarLog('Transferencia solicitada', `${resumen} → ${registro.puntoVentaNombre}`);
+  transferCarrito = [];
+  document.getElementById('transferCarritoBox').style.display = 'none';
   renderTransferencias();
   alert(t('transferSolicitadaOk'));
 });
+
+function itemsDeRegistro(r){
+  // Compatibilidad: registros viejos (antes del carrito) tenian un solo articulo
+  // suelto en el propio registro en vez de un array "items".
+  if(Array.isArray(r.items)) return r.items;
+  return [{ itemHotelId: r.itemHotelId, producto: r.producto, codigos: r.codigos, specs: r.specs, area: r.area, cantidad: r.cantidad }];
+}
 
 function renderTransferencias(){
   const el = document.getElementById('transferListado');
@@ -2902,17 +2961,18 @@ function renderTransferencias(){
   }
   if(lista.length === 0){ el.innerHTML = `<div class="hist-empty">${t('transferSinSolicitudes')}</div>`; return; }
   el.innerHTML = lista.map(r => {
+    const items = itemsDeRegistro(r);
     const estadoTxt = r.estado === 'pendiente' ? t('pendiente') : r.estado === 'aprobado' ? t('aprobado') : t('rechazado');
     const acciones = (puedeAprobar && r.estado === 'pendiente') ? `
       <div class="transfer-actions">
         <button class="btn btn-approve" data-action="aprobar" data-id="${r.id}">${t('aprobar')}</button>
         <button class="btn btn-reject" data-action="rechazar" data-id="${r.id}">${t('rechazar')}</button>
       </div>` : '';
+    const listaItems = items.map(it => `<div>• ${it.producto} (${it.codigos}) — <b>${fmtNum(it.cantidad)}</b></div>`).join('');
     return `<div class="transfer-card">
-      <div class="tp">${r.producto} <span class="estado-badge ${r.estado}">${estadoTxt}</span></div>
+      <div class="tp">${items.length > 1 ? t('transferVariosArticulos').replace('{n}', items.length) : items[0].producto} <span class="estado-badge ${r.estado}">${estadoTxt}</span></div>
       <div class="tm">
-        ${t('thCodigo')}: ${r.codigos}<br>
-        ${t('cantidad')} <b>${fmtNum(r.cantidad)}</b><br>
+        ${listaItems}
         ${t('solicita')} <b>${r.solicitante}</b> → <b>${r.puntoVentaNombre}</b><br>
         ${new Date(r.ts).toLocaleString('es-ES')}
       </div>
@@ -2929,64 +2989,78 @@ async function resolverTransferencia(id, accion){
   await cargarTransferencias();
   const reg = transferRequests.find(r => r.id === id);
   if(!reg || reg.estado !== 'pendiente') return;
+  const items = itemsDeRegistro(reg);
 
   if(accion === 'rechazar'){
     reg.estado = 'rechazado';
     const ok = await guardarTransferencias();
     if(!ok){ alert(t('errorGuardarGenerico')); return; }
-    registrarLog('Transferencia rechazada', `${reg.producto} (${reg.codigos}) — ${fmtNum(reg.cantidad)} → ${reg.puntoVentaNombre}`);
+    const resumen = items.map(it => `${it.producto} (${fmtNum(it.cantidad)})`).join(', ');
+    registrarLog('Transferencia rechazada', `${resumen} → ${reg.puntoVentaNombre}`);
     renderTransferencias();
     return;
   }
 
-  // ===== Aprobar: descontar del Hotel y sumar en Puntos de venta =====
+  // ===== Aprobar: descontar del Hotel y sumar en Puntos de venta, articulo por articulo =====
   const hotelPayload = await leerEstadoDeModo('hotel');
   if(!hotelPayload){ alert(t('transferErrLeerAlmacen')); return; }
-  const itHotel = (hotelPayload.extraItems || []).find(i => i.id === reg.itemHotelId);
-  if(!itHotel){ alert(t('transferErrArticuloNoExiste')); return; }
-  const dispHotel = disponibleEnPayload(itHotel, hotelPayload);
-  if(dispHotel < reg.cantidad){
-    if(!confirm(t('transferConfirmSinStock').replace('{d}', fmtNum(dispHotel)))) return;
-  }
   hotelPayload.stockState = hotelPayload.stockState || {};
-  hotelPayload.stockState[itHotel.id] = dispHotel - reg.cantidad;
   hotelPayload.movements = hotelPayload.movements || [];
-  hotelPayload.movements.unshift({
-    ts: new Date().toISOString(), itemId: itHotel.id, tipo: 'salida',
-    producto: itHotel.producto, codigos: itHotel.codigos, area: itHotel.area,
-    destino: 'Punto de venta: ' + reg.puntoVentaNombre, cantidad: reg.cantidad,
-    disponibleResultante: hotelPayload.stockState[itHotel.id],
-    quien: currentUser.name
-  });
+
+  const faltantes = [];
+  for(const it of items){
+    const itHotel = (hotelPayload.extraItems || []).find(i => i.id === it.itemHotelId);
+    if(!itHotel){ alert(t('transferErrArticuloNoExiste') + ' (' + it.producto + ')'); return; }
+    const dispHotel = disponibleEnPayload(itHotel, hotelPayload);
+    if(dispHotel < it.cantidad) faltantes.push(`${it.producto}: ${t('transferConfirmSinStock').replace('{d}', fmtNum(dispHotel))}`);
+  }
+  if(faltantes.length){
+    const seguir = await confirmarPersonalizado(faltantes.join('\n'));
+    if(!seguir) return;
+  }
+
+  await loadState(); // catalogo del PDV (modo actual)
+  for(const it of items){
+    const itHotel = (hotelPayload.extraItems || []).find(i => i.id === it.itemHotelId);
+    const dispHotel = disponibleEnPayload(itHotel, hotelPayload);
+    hotelPayload.stockState[itHotel.id] = dispHotel - it.cantidad;
+    hotelPayload.movements.unshift({
+      ts: new Date().toISOString(), itemId: itHotel.id, tipo: 'salida',
+      producto: itHotel.producto, codigos: itHotel.codigos, area: itHotel.area,
+      destino: 'Punto de venta: ' + reg.puntoVentaNombre, cantidad: it.cantidad,
+      disponibleResultante: hotelPayload.stockState[itHotel.id],
+      quien: currentUser.name
+    });
+
+    let itPdv = extraItems.find(i => i.codigos === itHotel.codigos);
+    if(!itPdv){
+      itPdv = {
+        id: 'it_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6) + Math.floor(Math.random()*1000),
+        area: itHotel.area, codigos: itHotel.codigos, producto: itHotel.producto,
+        specs: itHotel.specs, qtyReq: 0, disponibleInicial: 0
+      };
+      extraItems.push(itPdv);
+      byId[itPdv.id] = itPdv;
+    }
+    const dispPdvActual = disponibleDe(itPdv);
+    stockState[itPdv.id] = dispPdvActual + it.cantidad;
+    movements.unshift({
+      ts: new Date().toISOString(), itemId: itPdv.id, tipo: 'entrada',
+      producto: itPdv.producto, codigos: itPdv.codigos, area: itPdv.area,
+      destino: itPdv.area, cantidad: it.cantidad, disponibleResultante: stockState[itPdv.id],
+      quien: currentUser.name + ' (transferencia almacén)'
+    });
+  }
+
   await guardarEstadoDeModo('hotel', hotelPayload);
   hotelCatalogoCache = null; // invalidar cache, el almacen cambio
-
-  // Sumar en el catalogo del PDV (modo actual): reutilizar articulo si ya existe por codigo
-  await loadState();
-  let itPdv = extraItems.find(i => i.codigos === itHotel.codigos);
-  if(!itPdv){
-    itPdv = {
-      id: 'it_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      area: itHotel.area, codigos: itHotel.codigos, producto: itHotel.producto,
-      specs: itHotel.specs, qtyReq: 0, disponibleInicial: 0
-    };
-    extraItems.push(itPdv);
-    byId[itPdv.id] = itPdv;
-  }
-  const dispPdvActual = disponibleDe(itPdv);
-  stockState[itPdv.id] = dispPdvActual + reg.cantidad;
-  movements.unshift({
-    ts: new Date().toISOString(), itemId: itPdv.id, tipo: 'entrada',
-    producto: itPdv.producto, codigos: itPdv.codigos, area: itPdv.area,
-    destino: itPdv.area, cantidad: reg.cantidad, disponibleResultante: stockState[itPdv.id],
-    quien: currentUser.name + ' (transferencia almacén)'
-  });
   const okPdv = await saveState();
   if(!okPdv){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
 
   reg.estado = 'aprobado';
   await guardarTransferencias();
-  registrarLog('Transferencia aprobada', `${reg.producto} (${reg.codigos}) — ${fmtNum(reg.cantidad)} → ${reg.puntoVentaNombre}`);
+  const resumen = items.map(it => `${it.producto} (${fmtNum(it.cantidad)})`).join(', ');
+  registrarLog('Transferencia aprobada', `${resumen} → ${reg.puntoVentaNombre}`);
   render();
   renderTransferencias();
   alert(t('transferAprobadaOk'));
@@ -3069,7 +3143,8 @@ tabTransfer.addEventListener('click', async () => {
   hideAllViews();
   tabTransfer.classList.add('active');
   viewTransfer.style.display='block';
-  document.getElementById('transferSeleccionBox').style.display = 'none';
+  transferCarrito = [];
+  document.getElementById('transferCarritoBox').style.display = 'none';
   document.getElementById('transferSearch').value = '';
   document.getElementById('transferResultados').innerHTML = '';
   await cargarTransferencias();
