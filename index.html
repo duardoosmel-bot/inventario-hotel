@@ -133,6 +133,10 @@
   .hdr-top{display:flex;align-items:center;gap:8px;}
   .hdr-cambiar-btn{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:15px;cursor:pointer;touch-action:manipulation;}
   #portada{position:fixed;inset:0;background:var(--paper);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;}
+  #puertaAcceso{position:fixed;inset:0;background:var(--paper);z-index:400;align-items:center;justify-content:center;padding:24px;}
+  #puertaAcceso .portada-box{text-align:left;}
+  #puertaAcceso .portada-title{text-align:center;font-size:34px;}
+  #puertaAcceso .portada-sub{text-align:center;}
   .portada-box{max-width:360px;width:100%;text-align:center;position:relative;}
   .portada-lang{position:absolute;top:-42px;right:0;}
   .portada-title{font-size:26px;margin:0 0 6px;color:var(--ink);}
@@ -247,15 +251,11 @@
   // al final de la pagina) ya haya terminado de ejecutarse.
   window.entrarModo = function(nuevo){
     try{
-      window.modoApp = nuevo;
       localStorage.setItem('modoApp', nuevo);
       document.getElementById('portada').style.display = 'none';
       document.getElementById('appMain').style.display = 'block';
       if(typeof window.iniciarApp === 'function'){
-        window.iniciarApp().then(() => {
-          const btnUser = document.getElementById('btnUser');
-          if(btnUser) btnUser.click();
-        });
+        window.iniciarApp(); // al terminar, muestra la puerta de acceso (PIN obligatorio) por si sola
       }
     }catch(err){
       console.error('Error al entrar:', err);
@@ -270,6 +270,19 @@
 </script>
 </div>
 <div id="appMain" style="display:none;">
+<div id="puertaAcceso" style="display:none;">
+  <div class="portada-box">
+    <h1 class="portada-title" id="puertaTitulo">🔒</h1>
+    <p class="portada-sub" data-i18n="puertaSub">Identifícate para entrar</p>
+    <label data-i18n="tuPin">Tu PIN personal</label>
+    <input type="password" id="puertaPinInput" inputmode="numeric" maxlength="6" placeholder="****">
+    <div class="err" id="puertaErr"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="puertaVolver" data-i18n="btnVolverPortada">← Volver</button>
+      <button class="btn btn-primary" id="puertaEntrar" data-i18n="entrar">Entrar</button>
+    </div>
+  </div>
+</div>
 <header>
   <div class="hdr-top">
     <button class="hdr-cambiar-btn" id="btnCambiarModo" title="Cambiar de espacio">↩</button>
@@ -666,6 +679,7 @@ const I18N = {
     thFecha: 'Fecha', thQuien: 'Quién', thProducto: 'Producto', thCodigo: 'Código', thOrigen: 'Origen', thDestino: 'Destino', thCant: 'Cant.', thDisp: 'Disp. resultante',
     deshacer: 'deshacer', pedidoN: 'Pedido #', solicita: 'Solicita:', desde: 'Desde:', cantidad: 'Cantidad:',
     identificarse: 'Identificarse', sesionActiva: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
+    puertaSub: 'Identifícate para entrar', btnVolverPortada: '← Volver',
     tuPin: 'Tu PIN personal', cancelar: 'Cancelar', entrar: 'Entrar', nuevoEmpleado: '¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.',
     exportTitle: '📤 Exportar reporte (Excel)', exportHint: 'Inventario actual, movimientos del periodo y estado de stock por artículo.',
     preset7: 'Últimos 7 días', preset15: 'Últimos 15 días', preset30: 'Últimos 30 días',
@@ -764,6 +778,7 @@ const I18N = {
     thFecha: 'Date', thQuien: 'Who', thProducto: 'Product', thCodigo: 'Code', thOrigen: 'Origin', thDestino: 'Destination', thCant: 'Qty.', thDisp: 'Resulting avail.',
     deshacer: 'undo', pedidoN: 'Order #', solicita: 'Requested by:', desde: 'From:', cantidad: 'Quantity:',
     identificarse: 'Sign in', sesionActiva: 'Signed in as', cerrarSesion: 'Sign out',
+    puertaSub: 'Sign in to continue', btnVolverPortada: '← Back',
     tuPin: 'Your personal PIN', cancelar: 'Cancel', entrar: 'Sign in', nuevoEmpleado: 'New employee? Go to the "👥 Users" tab above to create one.',
     exportTitle: '📤 Export report (Excel)', exportHint: 'Current inventory, movements for the period and stock status per item.',
     preset7: 'Last 7 days', preset15: 'Last 15 days', preset30: 'Last 30 days',
@@ -862,6 +877,7 @@ const I18N = {
     thFecha: 'Tarehe', thQuien: 'Nani', thProducto: 'Bidhaa', thCodigo: 'Msimbo', thOrigen: 'Asili', thDestino: 'Marudio', thCant: 'Kiasi', thDisp: 'Inapatikana baadaye',
     deshacer: 'tengua', pedidoN: 'Ombi #', solicita: 'Anaomba:', desde: 'Kutoka:', cantidad: 'Kiasi:',
     identificarse: 'Ingia', sesionActiva: 'Umeingia kama', cerrarSesion: 'Toka',
+    puertaSub: 'Jitambulishe kuendelea', btnVolverPortada: '← Rudi',
     tuPin: 'PIN yako binafsi', cancelar: 'Ghairi', entrar: 'Ingia', nuevoEmpleado: 'Mfanyakazi mpya? Nenda kwenye kichupo "👥 Watumiaji" juu kuunda mmoja.',
     exportTitle: '📤 Hamisha ripoti (Excel)', exportHint: 'Hisa ya sasa, mienendo ya kipindi na hali ya hisa kwa kila bidhaa.',
     preset7: 'Siku 7 zilizopita', preset15: 'Siku 15 zilizopita', preset30: 'Siku 30 zilizopita',
@@ -2460,27 +2476,30 @@ btnUser.addEventListener('click', async () => {
 document.getElementById('userCancel').addEventListener('click', () => overlayUser.classList.remove('show'));
 overlayUser.addEventListener('click', e => { if(e.target === overlayUser) overlayUser.classList.remove('show'); });
 
-document.getElementById('loginConfirm').addEventListener('click', () => {
-  const pin = loginPinInput.value.trim();
+function intentarLogin(pin, onError){
   if(pin === '3076'){
     currentUser = { name: 'Administrador', role: ROLES.MASTER, departamentoId: null };
     quienNombre = currentUser.name;
     refreshUserUI();
     aplicarVisibilidadRBAC();
-    overlayUser.classList.remove('show');
-    return;
+    return true;
   }
   const u = findUserByPin(pin);
   if(!u){
-    loginErr.textContent = 'PIN no reconocido. Pide a un administrador que te cree un usuario.';
-    loginErr.style.display = 'block';
-    return;
+    if(onError) onError('PIN no reconocido. Pide a un administrador que te cree un usuario.');
+    return false;
   }
   currentUser = { name: u.name, pin: u.pin, role: u.role || ROLES.DEPARTAMENTO, departamentoId: u.departamentoId || null };
   quienNombre = u.name;
   refreshUserUI();
   aplicarVisibilidadRBAC();
-  overlayUser.classList.remove('show');
+  return true;
+}
+
+document.getElementById('loginConfirm').addEventListener('click', () => {
+  const pin = loginPinInput.value.trim();
+  const ok = intentarLogin(pin, (msg) => { loginErr.textContent = msg; loginErr.style.display = 'block'; });
+  if(ok) overlayUser.classList.remove('show');
 });
 loginPinInput.addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('loginConfirm').click(); });
 
@@ -2491,6 +2510,8 @@ document.getElementById('btnLogout').addEventListener('click', () => {
   hideAllViews();
   tabBuscar.classList.add('active');
   viewBuscar.style.display='block';
+  overlayUser.classList.remove('show');
+  mostrarPuertaAcceso();
 });
 
 const newUserRoleSel = document.getElementById('newUserRole');
@@ -3287,6 +3308,12 @@ document.getElementById('exportConfirm').addEventListener('click', async () => {
 });
 
 async function iniciarApp(){
+  // Releer el modo real de localStorage: entrarModo() ya lo guardo ahi al
+  // tocar la portada, pero la variable "modoApp" de este script solo se
+  // inicializo una vez al cargar la pagina, antes de que existiera esa
+  // eleccion. Sin esta linea, toda la app (claves de guardado, textos,
+  // pestaña de Transferencia) seguia usando el modo viejo por error.
+  modoApp = localStorage.getItem('modoApp') || 'hotel';
   if(typeof window.storage === 'undefined'){
     const banner = document.createElement('div');
     banner.style.cssText = 'background:#b3341c;color:#fff;padding:14px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;text-align:center;position:sticky;top:0;z-index:200;';
@@ -3300,7 +3327,32 @@ async function iniciarApp(){
   renderHist();
   aplicarVisibilidadRBAC();
   applyLang(currentLang);
+  mostrarPuertaAcceso();
 }
+
+// ===== Puerta de acceso obligatoria: sin PIN valido no se ve nada del contenido =====
+function mostrarPuertaAcceso(){
+  currentUser = null;
+  refreshUserUI();
+  aplicarVisibilidadRBAC();
+  document.getElementById('puertaTitulo').textContent = modoApp === 'pdv' ? '🏪' : '🏭';
+  document.getElementById('puertaPinInput').value = '';
+  document.getElementById('puertaErr').style.display = 'none';
+  document.getElementById('puertaAcceso').style.display = 'flex';
+  setTimeout(() => document.getElementById('puertaPinInput').focus(), 100);
+}
+function ocultarPuertaAcceso(){
+  document.getElementById('puertaAcceso').style.display = 'none';
+}
+document.getElementById('puertaEntrar').addEventListener('click', () => {
+  const pin = document.getElementById('puertaPinInput').value.trim();
+  const errEl = document.getElementById('puertaErr');
+  const ok = intentarLogin(pin, (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; });
+  if(ok) ocultarPuertaAcceso();
+});
+document.getElementById('puertaPinInput').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('puertaEntrar').click(); });
+document.getElementById('puertaVolver').addEventListener('click', () => location.reload());
+
 // Traducir solo el texto de la portada ya mismo (sin tocar el resto de la app,
 // que todavia no se ha inicializado): mas simple y seguro que llamar a la
 // funcion applyLang() completa antes de que exista ningun dato cargado.
