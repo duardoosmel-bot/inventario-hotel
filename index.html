@@ -132,19 +132,30 @@
   header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
   .hdr-top{display:flex;align-items:center;gap:8px;}
   .hdr-cambiar-btn{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:15px;cursor:pointer;touch-action:manipulation;}
-  #portada{position:fixed;inset:0;background:var(--paper);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;}
-  #puertaAcceso{position:fixed;inset:0;background:var(--paper);z-index:400;align-items:center;justify-content:center;padding:24px;}
-  #puertaAcceso .portada-box{text-align:left;}
-  #puertaAcceso .portada-title{text-align:center;font-size:34px;}
-  #puertaAcceso .portada-sub{text-align:center;}
-  .portada-box{max-width:360px;width:100%;text-align:center;position:relative;}
-  .portada-lang{position:absolute;top:-42px;right:0;}
-  .portada-title{font-size:26px;margin:0 0 6px;color:var(--ink);}
-  .portada-sub{font-family:Arial,sans-serif;color:var(--muted);font-size:13.5px;margin:0 0 26px;}
-  .portada-btn{display:flex;align-items:center;gap:14px;width:100%;padding:18px 20px;margin-bottom:14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;text-align:left;touch-action:manipulation;box-shadow:0 2px 6px rgba(43,36,29,.06);}
-  .portada-btn:active{background:var(--accent-soft);border-color:var(--accent);}
-  .portada-btn .pb-icon{font-size:30px;flex-shrink:0;}
-  .portada-btn .pb-label{font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
+  #portada{position:fixed;inset:0;background:linear-gradient(180deg,#faf6ef 0%,#f3ead9 100%);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;}
+  #puertaAcceso{position:fixed;inset:0;background:linear-gradient(180deg,#faf6ef 0%,#f3ead9 100%);z-index:400;align-items:center;justify-content:center;padding:24px;}
+
+  .portada-card{max-width:380px;width:100%;background:var(--card);border-radius:20px;box-shadow:0 12px 40px rgba(43,36,29,.14),0 2px 8px rgba(43,36,29,.06);padding:38px 30px 32px;text-align:center;position:relative;}
+  .portada-lang{position:absolute;top:16px;right:16px;width:auto;padding:6px 8px;font-size:11px;}
+  .portada-logo{font-size:34px;line-height:1;margin-bottom:14px;}
+  .portada-title{font-size:22px;margin:0 0 6px;color:var(--ink);font-weight:400;}
+  .portada-sub{font-family:Arial,sans-serif;color:var(--muted);font-size:13px;margin:0 0 28px;line-height:1.5;}
+
+  .portada-btn{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;margin-bottom:12px;border:1.5px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;text-align:left;touch-action:manipulation;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;}
+  .portada-btn:last-of-type{margin-bottom:0;}
+  .portada-btn:hover{border-color:var(--accent);box-shadow:0 6px 18px rgba(168,100,31,.14);transform:translateY(-1px);}
+  .portada-btn:active{transform:translateY(0);background:var(--accent-soft);}
+  .portada-btn .pb-icon{font-size:22px;flex-shrink:0;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;}
+  .portada-btn .pb-label{font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:var(--ink);}
+  .puerta-icon-badge{width:60px;height:60px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;}
+
+  .puerta-form{text-align:left;}
+  .puerta-form label{display:block;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px;}
+  .puerta-form input[type=password]{width:100%;box-sizing:border-box;padding:14px 16px;font-size:22px;letter-spacing:.5em;text-align:center;border:1.5px solid var(--line);border-radius:12px;background:#fbf8f2;color:var(--ink);}
+  .puerta-form input[type=password]:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft);}
+  .puerta-form input[type=password]::placeholder{letter-spacing:normal;font-size:15px;color:#c8bda6;}
+  .puerta-form .err{text-align:center;margin-top:12px;}
+  .puerta-form .actions{margin-top:20px;}
   h1{font-size:15px;margin:0;white-space:nowrap;flex-shrink:0;}
   .hdr-meta{font-size:10.5px;color:var(--muted);font-family:Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
   .sync-pending-badge{font-size:10px;font-weight:700;color:#8a5a00;background:#fbe9c8;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;align-items:center;}
@@ -227,13 +238,14 @@
 </head>
 <body>
 <div id="portada">
-  <div class="portada-box">
+  <div class="portada-card">
     <select class="lang-select portada-lang" id="langSelectPortada">
       <option value="es">🇪🇸 ES</option>
       <option value="en">🇬🇧 EN</option>
       <option value="sw">🇹🇿 SW</option>
     </select>
-    <h1 class="portada-title">📦 Inventario</h1>
+    <div class="portada-logo">📦</div>
+    <h1 class="portada-title" data-i18n="portadaTitulo">Inventario</h1>
     <p class="portada-sub" data-i18n="portadaSub">¿Dónde quieres entrar?</p>
     <button type="button" class="portada-btn" id="portadaAlmacen" data-modo-btn="hotel" onclick="entrarModo('hotel')">
       <span class="pb-icon">🏭</span>
@@ -254,8 +266,14 @@
       localStorage.setItem('modoApp', nuevo);
       document.getElementById('portada').style.display = 'none';
       document.getElementById('appMain').style.display = 'block';
+      // Mostrar la puerta de PIN YA MISMO (sincronico), antes de que el resto
+      // de la app (que tarda un poco en cargar datos) llegue a pintarse detras.
+      const puerta = document.getElementById('puertaAcceso');
+      const titulo = document.getElementById('puertaTitulo');
+      if(puerta) puerta.style.display = 'flex';
+      if(titulo) titulo.textContent = nuevo === 'pdv' ? '🏪' : '🏭';
       if(typeof window.iniciarApp === 'function'){
-        window.iniciarApp(); // al terminar, muestra la puerta de acceso (PIN obligatorio) por si sola
+        window.iniciarApp();
       }
     }catch(err){
       console.error('Error al entrar:', err);
@@ -271,15 +289,18 @@
 </div>
 <div id="appMain" style="display:none;">
 <div id="puertaAcceso" style="display:none;">
-  <div class="portada-box">
-    <h1 class="portada-title" id="puertaTitulo">🔒</h1>
+  <div class="portada-card">
+    <div class="puerta-icon-badge" id="puertaTitulo">🔒</div>
+    <h1 class="portada-title" data-i18n="puertaTitulo2">Acceso restringido</h1>
     <p class="portada-sub" data-i18n="puertaSub">Identifícate para entrar</p>
-    <label data-i18n="tuPin">Tu PIN personal</label>
-    <input type="password" id="puertaPinInput" inputmode="numeric" maxlength="6" placeholder="****">
-    <div class="err" id="puertaErr"></div>
-    <div class="actions">
-      <button class="btn btn-secondary" id="puertaVolver" data-i18n="btnVolverPortada">← Volver</button>
-      <button class="btn btn-primary" id="puertaEntrar" data-i18n="entrar">Entrar</button>
+    <div class="puerta-form">
+      <label data-i18n="tuPin">Tu PIN personal</label>
+      <input type="password" id="puertaPinInput" inputmode="numeric" maxlength="6" placeholder="••••">
+      <div class="err" id="puertaErr"></div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="puertaVolver" data-i18n="btnVolverPortada">← Volver</button>
+        <button class="btn btn-primary" id="puertaEntrar" data-i18n="entrar">Entrar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -679,7 +700,7 @@ const I18N = {
     thFecha: 'Fecha', thQuien: 'Quién', thProducto: 'Producto', thCodigo: 'Código', thOrigen: 'Origen', thDestino: 'Destino', thCant: 'Cant.', thDisp: 'Disp. resultante',
     deshacer: 'deshacer', pedidoN: 'Pedido #', solicita: 'Solicita:', desde: 'Desde:', cantidad: 'Cantidad:',
     identificarse: 'Identificarse', sesionActiva: 'Sesión activa como', cerrarSesion: 'Cerrar sesión',
-    puertaSub: 'Identifícate para entrar', btnVolverPortada: '← Volver',
+    puertaSub: 'Identifícate para entrar', btnVolverPortada: '← Volver', portadaTitulo: 'Inventario', puertaTitulo2: 'Acceso restringido',
     tuPin: 'Tu PIN personal', cancelar: 'Cancelar', entrar: 'Entrar', nuevoEmpleado: '¿Nuevo empleado? Ve a la pestaña "👥 Usuarios" arriba para crearlo.',
     exportTitle: '📤 Exportar reporte (Excel)', exportHint: 'Inventario actual, movimientos del periodo y estado de stock por artículo.',
     preset7: 'Últimos 7 días', preset15: 'Últimos 15 días', preset30: 'Últimos 30 días',
@@ -778,7 +799,7 @@ const I18N = {
     thFecha: 'Date', thQuien: 'Who', thProducto: 'Product', thCodigo: 'Code', thOrigen: 'Origin', thDestino: 'Destination', thCant: 'Qty.', thDisp: 'Resulting avail.',
     deshacer: 'undo', pedidoN: 'Order #', solicita: 'Requested by:', desde: 'From:', cantidad: 'Quantity:',
     identificarse: 'Sign in', sesionActiva: 'Signed in as', cerrarSesion: 'Sign out',
-    puertaSub: 'Sign in to continue', btnVolverPortada: '← Back',
+    puertaSub: 'Sign in to continue', btnVolverPortada: '← Back', portadaTitulo: 'Inventory', puertaTitulo2: 'Restricted access',
     tuPin: 'Your personal PIN', cancelar: 'Cancel', entrar: 'Sign in', nuevoEmpleado: 'New employee? Go to the "👥 Users" tab above to create one.',
     exportTitle: '📤 Export report (Excel)', exportHint: 'Current inventory, movements for the period and stock status per item.',
     preset7: 'Last 7 days', preset15: 'Last 15 days', preset30: 'Last 30 days',
@@ -877,7 +898,7 @@ const I18N = {
     thFecha: 'Tarehe', thQuien: 'Nani', thProducto: 'Bidhaa', thCodigo: 'Msimbo', thOrigen: 'Asili', thDestino: 'Marudio', thCant: 'Kiasi', thDisp: 'Inapatikana baadaye',
     deshacer: 'tengua', pedidoN: 'Ombi #', solicita: 'Anaomba:', desde: 'Kutoka:', cantidad: 'Kiasi:',
     identificarse: 'Ingia', sesionActiva: 'Umeingia kama', cerrarSesion: 'Toka',
-    puertaSub: 'Jitambulishe kuendelea', btnVolverPortada: '← Rudi',
+    puertaSub: 'Jitambulishe kuendelea', btnVolverPortada: '← Rudi', portadaTitulo: 'Hisa', puertaTitulo2: 'Ufikiaji wenye kizuizi',
     tuPin: 'PIN yako binafsi', cancelar: 'Ghairi', entrar: 'Ingia', nuevoEmpleado: 'Mfanyakazi mpya? Nenda kwenye kichupo "👥 Watumiaji" juu kuunda mmoja.',
     exportTitle: '📤 Hamisha ripoti (Excel)', exportHint: 'Hisa ya sasa, mienendo ya kipindi na hali ya hisa kwa kila bidhaa.',
     preset7: 'Siku 7 zilizopita', preset15: 'Siku 15 zilizopita', preset30: 'Siku 30 zilizopita',
