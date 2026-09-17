@@ -1258,6 +1258,7 @@ function renderLog(){
 }
 
 let lastLoadFailed = false;
+let estadoYaCargadoEnEstaSesion = false; // true en cuanto se cargan datos reales una vez
 let lastLoadError = '';
 const HAS_DATA_MARKER_KEY_BASE = 'inventario_ha_tenido_datos_v1';
 function claveHasDataMarker(){ return claveModo(HAS_DATA_MARKER_KEY_BASE); }
@@ -1272,10 +1273,29 @@ function yaHuboDatosAntes(){
   }catch(e){ return false; }
 }
 
+async function leerConReintento(key, intentos){
+  intentos = intentos || 3;
+  let ultimoError = null;
+  for(let i = 0; i < intentos; i++){
+    try{
+      const r = await window.storage.get(key, true);
+      if(r) return r;
+      // null/vacio: puede ser real, o puede ser Cloudflare KV tardando en
+      // propagar. Reintentamos un par de veces antes de darlo por vacio.
+      if(i < intentos - 1) await new Promise(res => setTimeout(res, 500));
+    }catch(e){
+      ultimoError = e;
+      if(i < intentos - 1) await new Promise(res => setTimeout(res, 500));
+    }
+  }
+  if(ultimoError) throw ultimoError;
+  return null;
+}
+
 async function loadState(){
   let cloudLoaded = false;
   try{
-    let r = await window.storage.get(claveModo('inventory_state'), true);
+    let r = await leerConReintento(claveModo('inventory_state'), 3);
     let migrandoDesdeClaveVieja = false;
     if(!r && modoApp === 'hotel'){
       // El selector de modo (Hotel/Puntos de venta) renombro la clave de
@@ -1306,24 +1326,27 @@ async function loadState(){
       hotelAreas = s.hotelAreas || hotelAreas;
       orderCounter = s.orderCounter || 0;
       marcarQueYaHuboDatos();
+      estadoYaCargadoEnEstaSesion = true;
       if(migrandoDesdeClaveVieja){
         await saveState(); // guardar ya mismo bajo la clave nueva 'hotel_inventory_state'
       }
-    } else if(yaHuboDatosAntes()){
-      // CRITICO: ya sabemos (por este mismo dispositivo) que existen datos reales
-      // en la nube, pero esta lectura concreta los devolvio vacios. Esto es tipico
-      // de Cloudflare KV (consistencia eventual: una lectura justo despues de un
-      // guardado, o desde otro borde de red, puede devolver "no encontrado" sin
-      // ser un error real). Antes esto se trataba como "inventario nuevo" y lo
-      // vaciaba todo. Ahora, sencillamente NO TOCAMOS lo que ya hay en memoria
-      // (ni lo vaciamos ni bloqueamos guardados futuros: lo que ya esta cargado
-      // sigue siendo valido, solo esta lectura puntual vino vacia por error).
+    } else if(estadoYaCargadoEnEstaSesion || yaHuboDatosAntes()){
+      // CRITICO: esta pestaña ya cargo datos reales antes (en esta sesion, o segun
+      // el marcador de este dispositivo), pero esta lectura concreta vino vacia.
+      // Esto es tipico de Cloudflare KV (consistencia eventual: una lectura justo
+      // despues de un guardado, o desde otro borde de red, puede devolver "no
+      // encontrado" sin ser un error real). Antes esto se trataba como "inventario
+      // nuevo" y lo vaciaba todo -- incluso en un dispositivo distinto al que
+      // guardo los datos, donde el marcador local no existia pero la sesion actual
+      // SI habia cargado bien. Ahora, sencillamente NO TOCAMOS lo que ya hay en
+      // memoria (ni lo vaciamos ni bloqueamos guardados futuros).
       console.error('Lectura vacía inesperada de la nube (posible inconsistencia temporal de Cloudflare KV) — se conserva el estado actual sin tocarlo.');
-      lastLoadError = 'Lectura vacía inesperada de la nube (Cloudflare KV puede tardar unos segundos en propagar cambios). Se mantuvo el inventario tal como estaba en este dispositivo.';
+      lastLoadError = 'Lectura vacía inesperada de la nube (Cloudflare KV puede tardar unos segundos en propagar cambios). Se mantuvo el inventario tal como estaba.';
     } else if(modoApp !== 'hotel'){
       // Puntos de venta es un espacio de datos nuevo: nunca hubo claves antiguas que migrar.
       stockState = {}; movements = []; extraItems = []; flaggedPhotos = {}; photoOverrides = {};
       users = []; hotelAreas = []; orderCounter = 0;
+      estadoYaCargadoEnEstaSesion = true;
     } else {
       // no existe el estado consolidado: intentar migrar desde las claves antiguas (version previa de la app, solo modo Hotel)
       let migrado = false;
@@ -1335,6 +1358,7 @@ async function loadState(){
       try{ const a = await window.storage.get('users', true); if(a){ users = JSON.parse(a.value); migrado = true; } else users = []; }catch(e){ users = []; }
       try{ const a = await window.storage.get('hotel_areas', true); if(a){ hotelAreas = JSON.parse(a.value); migrado = true; } }catch(e){ /* mantener defaults */ }
       try{ const a = await window.storage.get('order_counter', true); if(a){ orderCounter = JSON.parse(a.value); migrado = true; } else orderCounter = 0; }catch(e){ orderCounter = 0; }
+      estadoYaCargadoEnEstaSesion = true;
       if(migrado){
         // guardar de inmediato en el nuevo formato consolidado para no volver a hacer 8 lecturas
         await saveState();
@@ -1354,6 +1378,7 @@ async function loadState(){
     // usamos en vez de lo recien leido, y reintentamos subirlos ya mismo.
     aplicarPayload(backup.payload);
     lastLoadFailed = false;
+    estadoYaCargadoEnEstaSesion = true;
     syncPendiente = true;
     actualizarIndicadorSync();
     setTimeout(intentarResincronizar, 500);
@@ -1363,6 +1388,7 @@ async function loadState(){
       // en vez de dejar la pantalla vacia o conservar datos ya desactualizados.
       aplicarPayload(backup.payload);
       lastLoadFailed = false;
+      estadoYaCargadoEnEstaSesion = true;
       if(backup.pendingSync){ syncPendiente = true; actualizarIndicadorSync(); programarReintento(); }
     } else {
       // Ni nube ni respaldo local disponibles (primer uso de este dispositivo, sin
