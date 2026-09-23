@@ -773,6 +773,7 @@ const I18N = {
     lblCodigo: 'Código(s)', sinPermisoEditar: 'Tu rol no puede editar ni eliminar artículos.',
     errNombreVacio: 'El nombre del producto no puede estar vacío.', errCodigoVacio: 'El código no puede estar vacío.',
     errorGuardarGenerico: 'No se pudo guardar. Revisa tu conexión.',
+    errorGuardarFotoGenerico: 'Artículo guardado, pero la foto no se pudo subir todavía — se reintentará sola en segundo plano.',
     confirmEliminarArticulo: 'Vas a eliminar "{n}" del inventario. Esta acción no se puede deshacer. ¿Continuar?',
     btnBuscarEtiqueta: '🔍 Buscar por etiqueta', btnBuscarFoto: '📷 Buscar por foto',
     analizandoFoto: 'Analizando foto y comparando con las imágenes del inventario...',
@@ -880,6 +881,7 @@ const I18N = {
     lblCodigo: 'Code(s)', sinPermisoEditar: 'Your role cannot edit or delete items.',
     errNombreVacio: 'The product name cannot be empty.', errCodigoVacio: 'The code cannot be empty.',
     errorGuardarGenerico: 'Could not save. Check your connection.',
+    errorGuardarFotoGenerico: 'Item saved, but the photo could not be uploaded yet — it will retry automatically in the background.',
     confirmEliminarArticulo: 'You are about to delete "{n}" from inventory. This cannot be undone. Continue?',
     btnBuscarEtiqueta: '🔍 Search by label', btnBuscarFoto: '📷 Search by photo',
     analizandoFoto: 'Analyzing photo and comparing with inventory images...',
@@ -987,6 +989,7 @@ const I18N = {
     lblCodigo: 'Msimbo', sinPermisoEditar: 'Wadhifa wako hauwezi kuhariri au kufuta bidhaa.',
     errNombreVacio: 'Jina la bidhaa haliwezi kuwa tupu.', errCodigoVacio: 'Msimbo hauwezi kuwa tupu.',
     errorGuardarGenerico: 'Imeshindwa kuhifadhi. Angalia muunganisho wako.',
+    errorGuardarFotoGenerico: 'Bidhaa imehifadhiwa, lakini picha bado haijapakiwa — itajaribu tena yenyewe hivi karibuni.',
     confirmEliminarArticulo: 'Utafuta "{n}" kutoka hisa. Hatua hii haiwezi kutenguliwa. Endelea?',
     btnBuscarEtiqueta: '🔍 Tafuta kwa lebo', btnBuscarFoto: '📷 Tafuta kwa picha',
     analizandoFoto: 'Inachambua picha na kulinganisha na picha za hisa...',
@@ -1113,6 +1116,7 @@ let quienNombre = '';
 let extraItems = [];      // items agregados manualmente por el equipo
 let flaggedPhotos = {};   // itemId -> {quien, ts}
 let photoOverrides = {};  // itemId -> foto base64 tomada con camara
+let photoOverridesLegacy = null; // fotos encontradas en el payload principal (version anterior), pendientes de migrar
 let users = [];           // [{name, pin, role, departamentoId}]
 let departamentos = [];   // [{id, nombre}]
 let itemOverrides = {};   // itemId -> {producto, specs, area, codigos} editados manualmente
@@ -1156,9 +1160,108 @@ let ultimaRevConocida = 0; // control de version: evita que un dispositivo con d
 function payloadActual(){
   return {
     rev: ultimaRevConocida,
-    stockState, movements, extraItems, flaggedPhotos, photoOverrides,
+    stockState, movements, extraItems, flaggedPhotos,
     users, departamentos, itemOverrides, deletedItemIds, hotelAreas, orderCounter
   };
+}
+
+// ===================== Fotos: almacenamiento separado del resto del inventario =====================
+// Las fotos (base64) son lo que mas pesa y lo que mas rapido llena el limite de 5MB.
+// Van en su propia clave de la nube, con su propia proteccion (respaldo local,
+// control de version, reintentos) -- asi un problema en un lado nunca afecta al otro.
+const FOTOS_KEY_BASE = 'photos_state';
+const FOTOS_BACKUP_KEY_BASE = 'fotos_local_backup_v1';
+let ultimaRevConocidaFotos = 0;
+let fotosPendientes = false;
+
+function clavePhotos(){ return claveModo(FOTOS_KEY_BASE); }
+function claveFotosBackupLocal(){ return claveModo(FOTOS_BACKUP_KEY_BASE); }
+
+function guardarFotosBackupLocal(payload, pendingSync){
+  try{
+    localStorage.setItem(claveFotosBackupLocal(), JSON.stringify({ payload, ts: Date.now(), pendingSync }));
+  }catch(e){
+    console.error('No se pudo escribir el respaldo local de fotos (localStorage lleno o bloqueado)', e);
+  }
+}
+function leerFotosBackupLocal(){
+  try{
+    const raw = localStorage.getItem(claveFotosBackupLocal());
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+let fotosYaCargadasEnEstaSesion = false;
+async function cargarFotos(){
+  try{
+    // Una sola lectura (sin reintentos): esto se ejecuta en cada loadState(), y la
+    // mayoria de las veces la clave de fotos simplemente esta vacia de verdad (aun
+    // no se tomo ninguna foto) -- reintentar ahi solo añadiria demora sin necesidad.
+    const r = await window.storage.get(clavePhotos(), true);
+    if(r){
+      const s = JSON.parse(r.value);
+      photoOverrides = s.photoOverrides || {};
+      ultimaRevConocidaFotos = s.rev || 0;
+      fotosYaCargadasEnEstaSesion = true;
+      return;
+    }
+    if(fotosYaCargadasEnEstaSesion) return; // ya hubo fotos reales antes en esta sesion: no las vaciamos por una lectura rara
+  }catch(e){ /* seguimos abajo con el respaldo local */ }
+  const backup = leerFotosBackupLocal();
+  if(backup){
+    photoOverrides = (backup.payload && backup.payload.photoOverrides) || {};
+    ultimaRevConocidaFotos = (backup.payload && backup.payload.rev) || 0;
+    fotosYaCargadasEnEstaSesion = true;
+    if(backup.pendingSync){ fotosPendientes = true; actualizarIndicadorSync(); programarReintento(); }
+  }
+  // si no hay ni nube ni respaldo local, photoOverrides se queda como ya estuviera
+  // (normalmente {} en la primerisima carga de este dispositivo/modo)
+}
+
+let guardandoFotosEnProgreso = null;
+async function guardarFotos(){
+  if(guardandoFotosEnProgreso) return await guardandoFotosEnProgreso;
+  guardandoFotosEnProgreso = guardarFotosInterno();
+  try{
+    return await guardandoFotosEnProgreso;
+  } finally {
+    guardandoFotosEnProgreso = null;
+  }
+}
+async function guardarFotosInterno(){
+  const nuevaRev = ultimaRevConocidaFotos + 1;
+  const payload = { rev: nuevaRev, photoOverrides };
+  const json = JSON.stringify(payload);
+  const sizeKB = Math.round(new Blob([json]).size / 1024);
+  if(sizeKB > 4900){
+    console.error(`Las fotos ya pesan ${sizeKB}KB, muy cerca del límite (5MB).`);
+    return false;
+  }
+  guardarFotosBackupLocal(payload, true);
+  try{
+    const actual = await window.storage.get(clavePhotos(), true);
+    if(actual){
+      const revActual = (JSON.parse(actual.value).rev) || 0;
+      if(revActual > ultimaRevConocidaFotos){
+        console.error('Otro dispositivo guardó fotos más recientes mientras tanto — no se sobrescriben.');
+        return false;
+      }
+    }
+  }catch(e){ /* si falla la comprobacion seguimos: mejor guardar local que bloquear todo */ }
+  try{
+    await window.storage.set(clavePhotos(), json, true);
+    ultimaRevConocidaFotos = nuevaRev;
+    guardarFotosBackupLocal(payload, false);
+    fotosPendientes = false;
+    actualizarIndicadorSync();
+    return true;
+  }catch(e){
+    console.error('No se pudo sincronizar las fotos ahora mismo — quedan guardadas en este dispositivo y se reintentará solo', e);
+    fotosPendientes = true;
+    actualizarIndicadorSync();
+    programarReintento();
+    return true; // la foto SI esta a salvo en este dispositivo, pendiente de subir
+  }
 }
 
 function guardarBackupLocal(payload, pendingSync){
@@ -1184,8 +1287,9 @@ function leerBackupLocal(){
 function actualizarIndicadorSync(){
   const el = document.getElementById('syncPendingBadge');
   if(!el) return;
-  el.style.display = syncPendiente ? 'inline-flex' : 'none';
-  if(syncPendiente) el.textContent = '⏳ ' + t('syncPendienteTxt');
+  const pendiente = syncPendiente || fotosPendientes;
+  el.style.display = pendiente ? 'inline-flex' : 'none';
+  if(pendiente) el.textContent = '⏳ ' + t('syncPendienteTxt');
 }
 
 function programarReintento(){
@@ -1199,40 +1303,70 @@ async function intentarResincronizar(){
       logPendingSync = false;
     }catch(e){ /* se reintenta en el proximo ciclo */ }
   }
+
   const backup = leerBackupLocal();
-  if(!backup || !backup.pendingSync){
-    syncPendiente = false;
-    actualizarIndicadorSync();
-    if(reintentoTimer && !logPendingSync){ clearInterval(reintentoTimer); reintentoTimer = null; }
-    return;
-  }
-  try{
-    // Misma comprobacion de version que saveState(): si otro dispositivo guardo
-    // algo mas nuevo mientras este estaba desconectado, no lo pisamos a ciegas.
-    const actual = await window.storage.get(claveModo('inventory_state'), true);
-    if(actual){
-      const revActual = (JSON.parse(actual.value).rev) || 0;
-      const revBackup = backup.payload.rev || 0;
-      if(revActual > revBackup){
-        console.error('No se sincronizó el respaldo pendiente: otro dispositivo guardó algo más nuevo mientras tanto. Recarga la página para ver los cambios más recientes.');
-        syncPendiente = false; // dejar de reintentar este backup obsoleto
-        actualizarIndicadorSync();
-        if(reintentoTimer){ clearInterval(reintentoTimer); reintentoTimer = null; }
-        return;
+  if(backup && backup.pendingSync){
+    try{
+      // Misma comprobacion de version que saveState(): si otro dispositivo guardo
+      // algo mas nuevo mientras este estaba desconectado, no lo pisamos a ciegas.
+      const actual = await window.storage.get(claveModo('inventory_state'), true);
+      if(actual){
+        const revActual = (JSON.parse(actual.value).rev) || 0;
+        const revBackup = backup.payload.rev || 0;
+        if(revActual > revBackup){
+          console.error('No se sincronizó el respaldo pendiente: otro dispositivo guardó algo más nuevo mientras tanto. Recarga la página para ver los cambios más recientes.');
+          syncPendiente = false; // dejar de reintentar este backup obsoleto
+        } else {
+          await window.storage.set(claveModo('inventory_state'), JSON.stringify(backup.payload), true);
+          ultimaRevConocida = backup.payload.rev || ultimaRevConocida;
+          guardarBackupLocal(backup.payload, false);
+          syncPendiente = false;
+          console.log('Sincronización pendiente completada con éxito.');
+        }
+      } else {
+        await window.storage.set(claveModo('inventory_state'), JSON.stringify(backup.payload), true);
+        ultimaRevConocida = backup.payload.rev || ultimaRevConocida;
+        guardarBackupLocal(backup.payload, false);
+        syncPendiente = false;
       }
-    }
-    await window.storage.set(claveModo('inventory_state'), JSON.stringify(backup.payload), true);
-    ultimaRevConocida = backup.payload.rev || ultimaRevConocida;
-    guardarBackupLocal(backup.payload, false);
+    }catch(e){ /* sigue sin conexion, se reintentara en el proximo ciclo */ }
+  } else {
     syncPendiente = false;
-    actualizarIndicadorSync();
-    if(reintentoTimer && !logPendingSync){ clearInterval(reintentoTimer); reintentoTimer = null; }
-    console.log('Sincronización pendiente completada con éxito.');
-  }catch(e){
-    // sigue sin conexion, se reintentara en el proximo ciclo (o al volver el "online")
+  }
+
+  const backupFotos = leerFotosBackupLocal();
+  if(backupFotos && backupFotos.pendingSync){
+    try{
+      const actualFotos = await window.storage.get(clavePhotos(), true);
+      if(actualFotos){
+        const revActualFotos = (JSON.parse(actualFotos.value).rev) || 0;
+        const revBackupFotos = backupFotos.payload.rev || 0;
+        if(revActualFotos > revBackupFotos){
+          console.error('No se sincronizaron las fotos pendientes: otro dispositivo guardó fotos más nuevas mientras tanto.');
+          fotosPendientes = false;
+        } else {
+          await window.storage.set(clavePhotos(), JSON.stringify(backupFotos.payload), true);
+          ultimaRevConocidaFotos = backupFotos.payload.rev || ultimaRevConocidaFotos;
+          guardarFotosBackupLocal(backupFotos.payload, false);
+          fotosPendientes = false;
+        }
+      } else {
+        await window.storage.set(clavePhotos(), JSON.stringify(backupFotos.payload), true);
+        ultimaRevConocidaFotos = backupFotos.payload.rev || ultimaRevConocidaFotos;
+        guardarFotosBackupLocal(backupFotos.payload, false);
+        fotosPendientes = false;
+      }
+    }catch(e){ /* sigue sin conexion, se reintentara en el proximo ciclo */ }
+  } else {
+    fotosPendientes = false;
+  }
+
+  actualizarIndicadorSync();
+  if(reintentoTimer && !logPendingSync && !syncPendiente && !fotosPendientes){
+    clearInterval(reintentoTimer); reintentoTimer = null;
   }
 }
-window.addEventListener('online', () => { if(syncPendiente || logPendingSync) intentarResincronizar(); });
+window.addEventListener('online', () => { if(syncPendiente || logPendingSync || fotosPendientes) intentarResincronizar(); });
 
 // ===================== Log de actividad (independiente del inventario) =====================
 // Se guarda en una clave separada de la nube y en su propio respaldo local, para
@@ -1455,7 +1589,7 @@ async function loadState(){
       movements = s.movements || [];
       extraItems = s.extraItems || [];
       flaggedPhotos = s.flaggedPhotos || {};
-      photoOverrides = s.photoOverrides || {};
+      photoOverridesLegacy = s.photoOverrides || null; // migracion: version anterior guardaba las fotos aqui mismo
       // Fusionar en vez de sobrescribir: si la lectura de Cloudflare aun no
       // propago un usuario creado hace pocos segundos en esta misma sesion,
       // no lo perdemos (evita el "PIN no reconocido" justo tras crear un usuario).
@@ -1488,7 +1622,7 @@ async function loadState(){
       lastLoadError = 'Lectura vacía inesperada de la nube (Cloudflare KV puede tardar unos segundos en propagar cambios). Se mantuvo el inventario tal como estaba.';
     } else if(modoApp !== 'hotel'){
       // Puntos de venta es un espacio de datos nuevo: nunca hubo claves antiguas que migrar.
-      stockState = {}; movements = []; extraItems = []; flaggedPhotos = {}; photoOverrides = {};
+      stockState = {}; movements = []; extraItems = []; flaggedPhotos = {};
       users = []; hotelAreas = []; orderCounter = 0;
       estadoYaCargadoEnEstaSesion = true;
     } else {
@@ -1498,7 +1632,7 @@ async function loadState(){
       try{ const a = await window.storage.get('movements_log', true); if(a){ movements = JSON.parse(a.value); migrado = true; } else movements = []; }catch(e){ movements = []; }
       try{ const a = await window.storage.get('extra_items', true); if(a){ extraItems = JSON.parse(a.value); migrado = true; } else extraItems = []; }catch(e){ extraItems = []; }
       try{ const a = await window.storage.get('flagged_photos', true); if(a){ flaggedPhotos = JSON.parse(a.value); migrado = true; } else flaggedPhotos = {}; }catch(e){ flaggedPhotos = {}; }
-      try{ const a = await window.storage.get('photo_overrides', true); if(a){ photoOverrides = JSON.parse(a.value); migrado = true; } else photoOverrides = {}; }catch(e){ photoOverrides = {}; }
+      try{ const a = await window.storage.get('photo_overrides', true); if(a){ photoOverridesLegacy = JSON.parse(a.value); migrado = true; } }catch(e){ /* nada que migrar */ }
       try{ const a = await window.storage.get('users', true); if(a){ users = JSON.parse(a.value); migrado = true; } else users = []; }catch(e){ users = []; }
       try{ const a = await window.storage.get('hotel_areas', true); if(a){ hotelAreas = JSON.parse(a.value); migrado = true; } }catch(e){ /* mantener defaults */ }
       try{ const a = await window.storage.get('order_counter', true); if(a){ orderCounter = JSON.parse(a.value); migrado = true; } else orderCounter = 0; }catch(e){ orderCounter = 0; }
@@ -1544,6 +1678,17 @@ async function loadState(){
     lastLoadFailed = false;
   }
 
+  // Las fotos viven en su propia clave, aparte de todo lo demas.
+  await cargarFotos();
+  if(photoOverridesLegacy && Object.keys(photoOverridesLegacy).length && Object.keys(photoOverrides).length === 0){
+    // Migracion unica: esta cuenta tenia fotos guardadas en el payload principal
+    // (version anterior de la app, antes de separarlas) y la clave nueva de fotos
+    // todavia esta vacia. Las adoptamos y las guardamos ya mismo en su nuevo sitio.
+    photoOverrides = photoOverridesLegacy;
+    guardarFotos();
+  }
+  photoOverridesLegacy = null;
+
   // registrar items nuevos en byId por si aun no estaban
   extraItems.forEach(it => byId[it.id] = it);
   applyLocalOverrides();
@@ -1554,7 +1699,6 @@ function aplicarPayload(s){
   movements = s.movements || [];
   extraItems = s.extraItems || [];
   flaggedPhotos = s.flaggedPhotos || {};
-  photoOverrides = s.photoOverrides || {};
   users = s.users || [];
   departamentos = s.departamentos || [];
   itemOverrides = s.itemOverrides || {};
@@ -2127,7 +2271,8 @@ mCameraInput.addEventListener('change', async (e) => {
     photoOverrides[it.id] = base64;
     if(flaggedPhotos[it.id]) delete flaggedPhotos[it.id];
     const ok = await saveState();
-    if(!ok){
+    const okFoto = ok ? await guardarFotos() : false;
+    if(!ok || !okFoto){
       mTakePhoto.textContent = t('errorIntenta');
       mTakePhoto.disabled = false;
       alert('✗ ' + (lastSaveError || t('errorGuardarGenerico')));
@@ -2388,6 +2533,7 @@ async function ejecutarReinicioInventario(){
     alert('✗ ' + (lastSaveError || t('errorGuardarGenerico')));
     return;
   }
+  await guardarFotos(); // las fotos viven aparte: hay que vaciarlas tambien ahi
   registrarLog('REINICIO DE INVENTARIO', `Se vaciaron ${cantidadAntes} artículo(s). Realizado por ${currentUser ? currentUser.name : '—'}.`);
   sesionArticulosAgregados = 0;
   limpiarBusquedaPorFoto();
@@ -2481,10 +2627,11 @@ naConfirm.addEventListener('click', async () => {
     id: newId, area: area, codigos: codigo, producto: producto, specs: specs,
     qtyReq: null, stockAlmacen3: null, stockAlmacen1: null, stockTotal: cantidad,
     salidasPrevias: 0, disponibleInicial: cantidad, sinDatoStock: false, fusionado: false,
-    nombreInferido: false, img: naPhotoBase64
+    nombreInferido: false
   };
   extraItems.push(newItem);
   byId[newId] = newItem;
+  if(naPhotoBase64) photoOverrides[newId] = naPhotoBase64; // las fotos SIEMPRE van aparte, nunca embebidas en el articulo
   movements.unshift({
     ts: new Date().toISOString(), itemId: newId, tipo: 'alta',
     producto: producto, codigos: codigo, area: area,
@@ -2494,6 +2641,8 @@ naConfirm.addEventListener('click', async () => {
   naConfirm.disabled = true;
   naConfirm.textContent = t('guardando');
   const guardadoOk = await saveStateVerified();
+  let guardadoFotoOk = true;
+  if(guardadoOk && naPhotoBase64) guardadoFotoOk = await guardarFotos();
   naConfirm.disabled = false;
   naConfirm.textContent = t('btnAgregar');
 
@@ -2503,7 +2652,13 @@ naConfirm.addEventListener('click', async () => {
     movements.shift();
     extraItems.pop();
     delete byId[newId];
+    delete photoOverrides[newId];
     return;
+  }
+  if(!guardadoFotoOk){
+    naErr.textContent = '⚠ ' + t('errorGuardarFotoGenerico');
+    naErr.style.display = 'block';
+    // el articulo SI se guardo bien; solo la foto quedo pendiente de reintento en segundo plano
   }
 
   // Alta en cadena: no cerramos el modal. Limpiamos solo lo que cambia por
