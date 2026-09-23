@@ -161,6 +161,12 @@
   .sync-pending-badge{font-size:10px;font-weight:700;color:#8a5a00;background:#fbe9c8;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;align-items:center;}
   .save-btn{background:var(--ok);color:#fff;border-color:var(--ok);}
   .log-entry{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;font-family:Arial,sans-serif;}
+  .reconstruir-fila{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);font-family:Arial,sans-serif;font-size:12.5px;}
+  .reconstruir-fila:last-child{border-bottom:none;}
+  .reconstruir-fila .rf-info{flex:1;min-width:0;}
+  .reconstruir-fila .rf-prod{font-weight:700;color:var(--ink);}
+  .reconstruir-fila .rf-meta{font-size:11px;color:var(--muted);}
+  .reconstruir-resumen{font-family:Arial,sans-serif;font-size:12.5px;color:var(--muted);margin:12px 0 6px;}
   .transfer-resultados{max-height:220px;overflow-y:auto;border:1.5px solid var(--line);border-radius:8px;margin-top:6px;}
   .transfer-resultados:empty{display:none;}
   .transfer-item-row{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-family:Arial,sans-serif;font-size:12.5px;touch-action:manipulation;}
@@ -454,6 +460,14 @@
 
 <div id="viewLog" style="display:none;" class="hist-wrap">
   <p class="hint" style="padding:0 12px;" data-i18n="logHint">Registro de todo lo que se hace en la app (guardado por separado, sobrevive aunque el inventario se borre). Se guarda en este dispositivo al instante y también en la nube.</p>
+  <div class="form-card" id="reconstruirCard" data-perm="userCRUD" style="margin:0 12px 16px;">
+    <h2 data-i18n="reconstruirTitulo">🔧 Reconstruir inventario desde el log</h2>
+    <p class="hint" data-i18n="reconstruirHint">Si se perdieron artículos, esto revisa el log y te muestra qué se dio de alta (y qué se eliminó después), para restaurar solo lo que falte.</p>
+    <div class="actions">
+      <button class="btn btn-secondary" id="btnAnalizarLog" data-i18n="btnAnalizarLog">Analizar log</button>
+    </div>
+    <div id="reconstruirResultado"></div>
+  </div>
   <div id="logContent"></div>
 </div>
 
@@ -678,6 +692,11 @@ const I18N = {
     appTitle: 'Inventario Almacén', appMetaTpl: '{n} artículos · {a} áreas', syncPendienteTxt: 'Sin subir a la nube — reintentando...', modoAlmacen: 'Almacén', modoPdv: 'Puntos de venta', portadaSub: '¿Dónde quieres entrar?',
     tabLog: 'Log', btnGuardarAhora: 'Guardar ahora', guardadoOk: 'Guardado', guardadoLocalPendiente: 'Guardado en este dispositivo, sincronizando...',
     logHint: 'Registro de todo lo que se hace en la app (guardado por separado, sobrevive aunque el inventario se borre). Se guarda en este dispositivo al instante y también en la nube.',
+    reconstruirTitulo: '🔧 Reconstruir inventario desde el log', reconstruirHint: 'Si se perdieron artículos, esto revisa el log y te muestra qué se dio de alta (y qué se eliminó después), para restaurar solo lo que falte.',
+    btnAnalizarLog: 'Analizar log', reconstruirSinDatos: 'El log no tiene ninguna alta de artículo registrada.',
+    reconstruirTodoPresente: 'Según el log, todos los artículos dados de alta ya están presentes en el inventario. No falta nada por restaurar.',
+    reconstruirResumen: '{n} artículo(s) que el log dice que existían pero no están ahora ({y} ya están presentes y se omiten).',
+    btnRestaurarSeleccionados: 'Restaurar seleccionados', reconstruirOk: '✓ Se restauraron {n} artículo(s) a partir del log.',
     logVacio: 'Aún no hay actividad registrada.',
     tabBuscar: 'Buscador', tabHist: 'Historial', tabPedidos: 'Pedidos', tabUsuarios: 'Usuarios', tabDeptos: 'Deptos',
     btnReconteo: 'Reconteo', btnIdentify: '👤 Identificarse', btnFilters: 'Filtros ▾',
@@ -702,6 +721,7 @@ const I18N = {
     transferSolicitadaOk: '✓ Transferencia solicitada. Quedará pendiente hasta que se apruebe.',
     transferSinSolicitudes: 'Aún no hay transferencias solicitadas.',
     transferErrLeerAlmacen: 'No se pudo leer el inventario del almacén (Hotel). Revisa tu conexión.',
+    transferConflictoVersion: 'El almacén cambió justo ahora desde otro dispositivo. Vuelve a intentar aprobar esta transferencia en unos segundos.',
     transferErrArticuloNoExiste: 'Ese artículo ya no existe en el almacén del hotel.',
     transferConfirmSinStock: 'El almacén solo tiene {d} disponibles, menos de lo solicitado. ¿Aprobar de todas formas?',
     transferAprobadaOk: '✓ Transferencia aprobada: descontado del almacén y sumado al punto de venta.',
@@ -779,6 +799,11 @@ const I18N = {
     appTitle: 'Warehouse Inventory', appMetaTpl: '{n} items · {a} areas', syncPendienteTxt: 'Not uploaded yet — retrying...', modoAlmacen: 'Warehouse', modoPdv: 'Points of sale', portadaSub: 'Where do you want to go?',
     tabLog: 'Log', btnGuardarAhora: 'Save now', guardadoOk: 'Saved', guardadoLocalPendiente: 'Saved on this device, syncing...',
     logHint: 'Log of everything done in the app (saved separately, survives even if the inventory is wiped). Saved instantly on this device and also in the cloud.',
+    reconstruirTitulo: '🔧 Rebuild inventory from the log', reconstruirHint: 'If items were lost, this reviews the log and shows what was added (and later removed), so you can restore only what is missing.',
+    btnAnalizarLog: 'Analyze log', reconstruirSinDatos: 'The log has no item additions recorded.',
+    reconstruirTodoPresente: 'According to the log, every added item is already present in the inventory. Nothing to restore.',
+    reconstruirResumen: '{n} item(s) the log says existed but are not there now ({y} already present, skipped).',
+    btnRestaurarSeleccionados: 'Restore selected', reconstruirOk: '✓ Restored {n} item(s) from the log.',
     logVacio: 'No activity logged yet.',
     tabBuscar: 'Search', tabHist: 'History', tabPedidos: 'Orders', tabUsuarios: 'Users', tabDeptos: 'Depts',
     btnReconteo: 'Recount', btnIdentify: '👤 Sign in', btnFilters: 'Filters ▾',
@@ -803,6 +828,7 @@ const I18N = {
     transferSolicitadaOk: '✓ Transfer requested. It will stay pending until approved.',
     transferSinSolicitudes: 'No transfers requested yet.',
     transferErrLeerAlmacen: 'Could not read the warehouse (Hotel) inventory. Check your connection.',
+    transferConflictoVersion: 'The warehouse just changed from another device. Try approving this transfer again in a few seconds.',
     transferErrArticuloNoExiste: 'That item no longer exists in the hotel warehouse.',
     transferConfirmSinStock: 'The warehouse only has {d} available, less than requested. Approve anyway?',
     transferAprobadaOk: '✓ Transfer approved: deducted from the warehouse and added to the point of sale.',
@@ -880,6 +906,11 @@ const I18N = {
     appTitle: 'Hisa ya Ghala', appMetaTpl: 'bidhaa {n} · maeneo {a}', syncPendienteTxt: 'Bado haijapakiwa — inajaribu tena...', modoAlmacen: 'Ghala', modoPdv: 'Sehemu za mauzo', portadaSub: 'Unataka kuingia wapi?',
     tabLog: 'Log', btnGuardarAhora: 'Hifadhi sasa', guardadoOk: 'Imehifadhiwa', guardadoLocalPendiente: 'Imehifadhiwa kwenye kifaa hiki, inasawazisha...',
     logHint: 'Rekodi ya kila kitu kinachofanywa kwenye programu (imehifadhiwa tofauti, inasalia hata kama hisa itafutwa). Inahifadhiwa papo hapo kwenye kifaa hiki na pia kwenye wingu.',
+    reconstruirTitulo: '🔧 Jenga upya hisa kutoka kwenye log', reconstruirHint: 'Kama bidhaa zimepotea, hii inakagua log na kuonyesha zilizoongezwa (na zilizofutwa baadaye), ili kurejesha zinazokosekana tu.',
+    btnAnalizarLog: 'Changanua log', reconstruirSinDatos: 'Log haina rekodi ya kuongezwa kwa bidhaa.',
+    reconstruirTodoPresente: 'Kulingana na log, bidhaa zote zilizoongezwa tayari zipo kwenye hisa. Hakuna cha kurejesha.',
+    reconstruirResumen: 'Bidhaa {n} ambazo log inasema zilikuwepo lakini hazipo sasa ({y} tayari zipo, zimerukwa).',
+    btnRestaurarSeleccionados: 'Rejesha zilizochaguliwa', reconstruirOk: '✓ Bidhaa {n} zimerejeshwa kutoka log.',
     logVacio: 'Bado hakuna shughuli iliyorekodiwa.',
     tabBuscar: 'Tafuta', tabHist: 'Historia', tabPedidos: 'Maombi', tabUsuarios: 'Watumiaji', tabDeptos: 'Idara',
     btnReconteo: 'Hesabu upya', btnIdentify: '👤 Ingia', btnFilters: 'Vichujio ▾',
@@ -904,6 +935,7 @@ const I18N = {
     transferSolicitadaOk: '✓ Uhamisho umeombwa. Utabaki ukisubiri hadi uthibitishwe.',
     transferSinSolicitudes: 'Bado hakuna uhamisho ulioombwa.',
     transferErrLeerAlmacen: 'Imeshindwa kusoma hisa ya ghala (Hoteli). Angalia muunganisho wako.',
+    transferConflictoVersion: 'Ghala limebadilika sasa hivi kutoka kifaa kingine. Jaribu kuidhinisha uhamisho huu tena baada ya sekunde chache.',
     transferErrArticuloNoExiste: 'Bidhaa hiyo haipo tena kwenye ghala la hoteli.',
     transferConfirmSinStock: 'Ghala lina {d} tu zinazopatikana, chini ya ilivyoombwa. Idhinisha hata hivyo?',
     transferAprobadaOk: '✓ Uhamisho umeidhinishwa: umetolewa ghalani na kuongezwa kwenye sehemu ya mauzo.',
@@ -1119,8 +1151,11 @@ function claveBackupLocal(){ return claveModo(LOCAL_BACKUP_KEY_BASE); }
 let syncPendiente = false;
 let reintentoTimer = null;
 
+let ultimaRevConocida = 0; // control de version: evita que un dispositivo con datos
+                            // viejos en memoria sobrescriba cambios mas nuevos de otro
 function payloadActual(){
   return {
+    rev: ultimaRevConocida,
     stockState, movements, extraItems, flaggedPhotos, photoOverrides,
     users, departamentos, itemOverrides, deletedItemIds, hotelAreas, orderCounter
   };
@@ -1172,7 +1207,22 @@ async function intentarResincronizar(){
     return;
   }
   try{
+    // Misma comprobacion de version que saveState(): si otro dispositivo guardo
+    // algo mas nuevo mientras este estaba desconectado, no lo pisamos a ciegas.
+    const actual = await window.storage.get(claveModo('inventory_state'), true);
+    if(actual){
+      const revActual = (JSON.parse(actual.value).rev) || 0;
+      const revBackup = backup.payload.rev || 0;
+      if(revActual > revBackup){
+        console.error('No se sincronizó el respaldo pendiente: otro dispositivo guardó algo más nuevo mientras tanto. Recarga la página para ver los cambios más recientes.');
+        syncPendiente = false; // dejar de reintentar este backup obsoleto
+        actualizarIndicadorSync();
+        if(reintentoTimer){ clearInterval(reintentoTimer); reintentoTimer = null; }
+        return;
+      }
+    }
     await window.storage.set(claveModo('inventory_state'), JSON.stringify(backup.payload), true);
+    ultimaRevConocida = backup.payload.rev || ultimaRevConocida;
     guardarBackupLocal(backup.payload, false);
     syncPendiente = false;
     actualizarIndicadorSync();
@@ -1257,6 +1307,99 @@ function renderLog(){
   el.innerHTML = filas;
 }
 
+// ===== Reconstruir inventario a partir del log (por si se perdieron articulos) =====
+// El log guarda texto legible, no datos estructurados, asi que esto interpreta
+// las entradas "Alta articulo" / "Editar articulo" / "Eliminar articulo" para
+// reconstruir que deberia existir. Es un mejor-esfuerzo, no un respaldo exacto:
+// siempre muestra una vista previa antes de restaurar nada.
+function analizarLogParaReconstruccion(){
+  const reconstruido = {}; // codigo -> {producto, codigos, area, cantidad}
+  actionLog.forEach(e => {
+    if(e.accion === 'Alta artículo'){
+      const m = e.detalle.match(/^(.*) \((.*)\) — (.*) — cant\. (.*)$/);
+      if(m){
+        reconstruido[m[2]] = { producto: m[1], codigos: m[2], area: m[3], cantidad: parseFloat(m[4]) || 0 };
+      }
+    } else if(e.accion === 'Editar artículo'){
+      const m = e.detalle.match(/^(.*) \((.*)\) — (.*)$/);
+      if(m && reconstruido[m[2]]){
+        reconstruido[m[2]].producto = m[1];
+        reconstruido[m[2]].area = m[3];
+      }
+    } else if(e.accion === 'Eliminar artículo'){
+      const m = e.detalle.match(/^(.*) \((.*)\) — (.*)$/);
+      if(m) delete reconstruido[m[2]];
+    } else if(e.accion === 'REINICIO DE INVENTARIO'){
+      // desde un reinicio explicito no reconstruimos nada de antes (fue intencional)
+      Object.keys(reconstruido).forEach(k => delete reconstruido[k]);
+    }
+  });
+  return Object.values(reconstruido);
+}
+
+let reconstruccionPendiente = [];
+document.getElementById('btnAnalizarLog').addEventListener('click', () => {
+  const candidatos = analizarLogParaReconstruccion();
+  const existentesPorCodigo = new Set(allItems().map(it => it.codigos));
+  reconstruccionPendiente = candidatos.filter(c => !existentesPorCodigo.has(c.codigos));
+  const yaExisten = candidatos.length - reconstruccionPendiente.length;
+  const el = document.getElementById('reconstruirResultado');
+  if(candidatos.length === 0){
+    el.innerHTML = `<p class="hint">${t('reconstruirSinDatos')}</p>`;
+    return;
+  }
+  if(reconstruccionPendiente.length === 0){
+    el.innerHTML = `<p class="hint">${t('reconstruirTodoPresente')}</p>`;
+    return;
+  }
+  el.innerHTML = `
+    <p class="reconstruir-resumen">${t('reconstruirResumen').replace('{n}', reconstruccionPendiente.length).replace('{y}', yaExisten)}</p>
+    ${reconstruccionPendiente.map((c,i) => `
+      <div class="reconstruir-fila">
+        <input type="checkbox" checked data-idx="${i}" class="rf-check">
+        <div class="rf-info">
+          <div class="rf-prod">${c.producto}</div>
+          <div class="rf-meta">${c.codigos} · ${c.area} · cant. ${fmtNum(c.cantidad)}</div>
+        </div>
+      </div>`).join('')}
+    <div class="actions">
+      <button class="btn btn-primary" id="btnRestaurarSeleccionados">${t('btnRestaurarSeleccionados')}</button>
+    </div>`;
+  document.getElementById('btnRestaurarSeleccionados').addEventListener('click', restaurarSeleccionados);
+});
+
+async function restaurarSeleccionados(){
+  const marcados = Array.from(document.querySelectorAll('.rf-check:checked')).map(c => parseInt(c.dataset.idx));
+  if(marcados.length === 0) return;
+  const btn = document.getElementById('btnRestaurarSeleccionados');
+  btn.disabled = true;
+  btn.textContent = t('guardando');
+  await loadState();
+  const existentesPorCodigo = new Set(allItems().map(it => it.codigos));
+  let restaurados = 0;
+  marcados.forEach(i => {
+    const c = reconstruccionPendiente[i];
+    if(!c || existentesPorCodigo.has(c.codigos)) return; // proteccion extra contra duplicados
+    const nuevo = {
+      id: 'it_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8) + Math.floor(Math.random()*1000),
+      area: c.area, codigos: c.codigos, producto: c.producto, specs: '', qtyReq: 0, disponibleInicial: c.cantidad
+    };
+    extraItems.push(nuevo);
+    byId[nuevo.id] = nuevo;
+    stockState[nuevo.id] = c.cantidad;
+    existentesPorCodigo.add(c.codigos);
+    restaurados++;
+  });
+  const ok = await saveState();
+  btn.disabled = false;
+  btn.textContent = t('btnRestaurarSeleccionados');
+  if(!ok){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
+  registrarLog('Restaurado desde log', `${restaurados} artículo(s)`);
+  render();
+  document.getElementById('reconstruirResultado').innerHTML = `<p class="hint">${t('reconstruirOk').replace('{n}', restaurados)}</p>`;
+  alert(t('reconstruirOk').replace('{n}', restaurados));
+}
+
 let lastLoadFailed = false;
 let estadoYaCargadoEnEstaSesion = false; // true en cuanto se cargan datos reales una vez
 let lastLoadError = '';
@@ -1325,6 +1468,7 @@ async function loadState(){
       deletedItemIds = s.deletedItemIds || {};
       hotelAreas = s.hotelAreas || hotelAreas;
       orderCounter = s.orderCounter || 0;
+      ultimaRevConocida = s.rev || 0;
       marcarQueYaHuboDatos();
       estadoYaCargadoEnEstaSesion = true;
       if(migrandoDesdeClaveVieja){
@@ -1417,16 +1561,49 @@ function aplicarPayload(s){
   deletedItemIds = s.deletedItemIds || {};
   hotelAreas = s.hotelAreas || hotelAreas;
   orderCounter = s.orderCounter || 0;
+  ultimaRevConocida = s.rev || 0;
 }
 
 let lastSaveError = '';
+let guardadoEnProgreso = null; // si dos acciones casi simultaneas (doble toque,
+                                // dos pestañas del mismo dispositivo) llaman a
+                                // saveState() a la vez, la segunda espera el mismo
+                                // resultado en vez de arrancar otro guardado en paralelo.
 async function saveState(){
+  if(guardadoEnProgreso) return await guardadoEnProgreso;
+  guardadoEnProgreso = saveStateInterno();
+  try{
+    return await guardadoEnProgreso;
+  } finally {
+    guardadoEnProgreso = null;
+  }
+}
+async function saveStateInterno(){
   if(lastLoadFailed){
     lastSaveError = 'No se guardó nada: nunca se pudo confirmar el estado real (ni desde la nube ni desde este dispositivo). Revisa tu conexión e inténtalo de nuevo.';
     console.error(lastSaveError);
     return false;
   }
+
+  // Control de version: si otro dispositivo guardo cambios despues de que este
+  // cargara por ultima vez, no lo sobrescribimos a ciegas (esto es lo que probablemente
+  // estaba borrando datos: varios dispositivos guardando por turnos sin comprobar
+  // si alguien mas ya habia guardado algo mas nuevo mientras tanto).
+  try{
+    const actual = await window.storage.get(claveModo('inventory_state'), true);
+    if(actual){
+      const revActual = (JSON.parse(actual.value).rev) || 0;
+      if(revActual > ultimaRevConocida){
+        lastSaveError = 'Otro dispositivo guardó cambios más recientes mientras tanto. Para no perder esos cambios, recarga la página (⤺ o F5) y vuelve a intentar tu cambio.';
+        console.error(lastSaveError);
+        return false;
+      }
+    }
+  }catch(e){ /* si falla esta comprobacion (p. ej. sin conexion), seguimos: mejor guardar localmente que bloquear todo */ }
+
+  const nuevaRev = ultimaRevConocida + 1;
   const payload = payloadActual();
+  payload.rev = nuevaRev;
   const json = JSON.stringify(payload);
   const sizeKB = Math.round(new Blob([json]).size / 1024);
   if(sizeKB > 4900){
@@ -1441,6 +1618,7 @@ async function saveState(){
   // 2) Intentar subir a la nube ya mismo.
   try{
     await window.storage.set(claveModo('inventory_state'), json, true);
+    ultimaRevConocida = nuevaRev;
     guardarBackupLocal(payload, false);
     marcarQueYaHuboDatos();
     lastSaveError = '';
@@ -2818,7 +2996,20 @@ async function leerEstadoDeModo(modo){
   }catch(e){ return null; }
 }
 async function guardarEstadoDeModo(modo, payload){
-  await window.storage.set(modo + '_inventory_state', JSON.stringify(payload), true);
+  // Misma proteccion de version que saveState(): si otro dispositivo ya guardo
+  // algo mas nuevo en este modo (p. ej. alguien en Almacen movio stock justo
+  // mientras se aprobaba esta transferencia), no lo pisamos a ciegas.
+  const key = modo + '_inventory_state';
+  const actual = await window.storage.get(key, true);
+  if(actual){
+    const revActual = (JSON.parse(actual.value).rev) || 0;
+    const revConocida = payload.rev || 0;
+    if(revActual > revConocida){
+      throw new Error('CONFLICTO_VERSION');
+    }
+  }
+  payload.rev = (payload.rev || 0) + 1;
+  await window.storage.set(key, JSON.stringify(payload), true);
 }
 function disponibleEnPayload(item, payload){
   const ss = (payload && payload.stockState) || {};
@@ -2834,6 +3025,18 @@ async function cargarTransferencias(){
 }
 async function guardarTransferencias(){
   try{
+    // Fusionar por id con lo que haya en la nube en vez de sobrescribir a ciegas:
+    // dos transferencias pueden crearse/aprobarse casi a la vez desde dispositivos
+    // distintos (uno en Almacen, otro en Puntos de venta), y no deben borrarse entre si.
+    let servidor = [];
+    try{
+      const r = await window.storage.get(TRANSFER_KEY, true);
+      if(r) servidor = JSON.parse(r.value) || [];
+    }catch(e){ /* seguimos solo con lo que haya en memoria */ }
+    const porId = {};
+    servidor.forEach(t => { porId[t.id] = t; });
+    transferRequests.forEach(t => { porId[t.id] = t; }); // los cambios de este dispositivo ganan sobre sus propias ids
+    transferRequests = Object.values(porId).sort((a,b) => new Date(b.ts) - new Date(a.ts));
     await window.storage.set(TRANSFER_KEY, JSON.stringify(transferRequests), true);
     return true;
   }catch(e){
@@ -3078,7 +3281,16 @@ async function resolverTransferencia(id, accion){
     });
   }
 
-  await guardarEstadoDeModo('hotel', hotelPayload);
+  try{
+    await guardarEstadoDeModo('hotel', hotelPayload);
+  }catch(e){
+    if(String(e.message).includes('CONFLICTO_VERSION')){
+      alert(t('transferConflictoVersion'));
+    } else {
+      alert('✗ ' + (e.message || t('errorGuardarGenerico')));
+    }
+    return; // no tocar el lado de Puntos de venta si el almacen no se pudo guardar
+  }
   hotelCatalogoCache = null; // invalidar cache, el almacen cambio
   const okPdv = await saveState();
   if(!okPdv){ alert('✗ ' + (lastSaveError || t('errorGuardarGenerico'))); return; }
