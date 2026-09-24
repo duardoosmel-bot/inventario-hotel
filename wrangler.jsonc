@@ -11,5 +11,19 @@
       "binding": "STORAGE",
       "id": "1683aad7504e4cb4a2313003cf5448c2"
     }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "STORAGE_DO",
+        "class_name": "StorageDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["StorageDO"]
+    }
   ]
 }
