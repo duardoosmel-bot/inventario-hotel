@@ -23,7 +23,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["StorageDO"]
+      "new_sqlite_classes": ["StorageDO"]
     }
   ]
 }
