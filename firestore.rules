@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function devPath(uid) {
+      return /databases/$(database)/documents/devices/$(uid);
+    }
+    function invitePath(id) {
+      return /databases/$(database)/documents/invites/$(id);
+    }
+    function adminExists() {
+      return exists(/databases/$(database)/documents/config/admin);
+    }
+    function isApproved() {
+      return signedIn()
+        && exists(devPath(request.auth.uid))
+        && get(devPath(request.auth.uid)).data.status == 'approved';
+    }
+    function isAdmin() {
+      return isApproved() && get(devPath(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Datos de la app F&B: solo dispositivos aprobados.
+    // Cocina (claves que empiezan por kitchen_) sigue como hoy: cualquier sesion iniciada.
+    match /appData/{key} {
+      allow read, write: if isApproved()
+        || (signedIn() && key.matches('kitchen_.*'));
+    }
+
+    // Quien es el administrador (solo se puede crear si todavia no existe)
+    match /config/admin {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && !adminExists()
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Invitaciones: solo se leen conociendo el codigo; solo el admin las lista/crea/anula
+    match /invites/{id} {
+      allow get: if signedIn();
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+            && resource.data.usedBy == null
+            && request.resource.data.usedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy', 'usedAt']));
+    }
+
+    // Dispositivos
+    match /devices/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid && (
+        // 1) primer dispositivo: se registra como administrador
+        (!adminExists()
+          && request.resource.data.role == 'admin'
+          && request.resource.data.status == 'approved')
+        ||
+        // 2) solicitud con invitacion valida (sin usar y sin vencer)
+        (adminExists()
+          && request.resource.data.keys().hasOnly(['uid', 'role', 'status', 'inviteId', 'name', 'position', 'info', 'createdAt', 'lastSeen'])
+          && request.resource.data.role == 'user'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.inviteId is string
+          && exists(invitePath(request.resource.data.inviteId))
+          && get(invitePath(request.resource.data.inviteId)).data.usedBy == null
+          && get(invitePath(request.resource.data.inviteId)).data.expiresAt > request.time.toMillis())
+      );
+      allow update: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']));
+      allow delete: if isAdmin();
+    }
+
+    // Todo lo demas, bloqueado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
